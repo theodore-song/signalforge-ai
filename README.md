@@ -4,9 +4,10 @@ SignalForge is a public, Vercel-ready stock research dashboard. It combines expe
 
 ## What works out of the box
 
-- Responsive public dashboard with a 20-stock liquid US universe
+- Responsive public dashboard with a market-cap-ranked 2,000-stock US-listed universe
 - Deterministic demonstration market data, clearly labelled as modeled
 - Ten-factor explainable scoring and risk cases
+- Search tab with six factor leaderboards, ticker/company search, sector filters, pagination, and five-stock comparison
 - Fresh scan endpoint with optional OpenAI investment-committee brief
 - AI-suggested-only paper portfolio stored in the visitor's browser
 - Automatic browser refresh every 60 seconds during the regular US session
@@ -26,6 +27,8 @@ Open `http://localhost:3000`.
 ## Data connections
 
 Set `ALPACA_API_KEY` and `ALPACA_API_SECRET` for live IEX snapshots. Without them, the site intentionally runs in demonstration mode.
+
+The checked-in security master is generated from Nasdaq's public stock screener and contains the 2,000 largest eligible US-listed common stocks and ADRs by market capitalization. Funds, preferred shares, debt securities, warrants, units, rights, and blank-check companies are excluded. Run `npm run refresh:universe` to refresh it; a monthly GitHub workflow validates and commits membership changes automatically.
 
 Optional disclosure and sentiment endpoints must return a JSON array:
 
@@ -47,6 +50,13 @@ Set `OPENAI_API_KEY` to enable the server-side investment committee brief. `OPEN
 Pro and Enterprise projects can change the schedule to `*/10 13-21 * * 1-5` for ten-minute weekday scans. The UTC window is intentionally broad because US daylight-saving time changes the UTC market hours. The server route and open dashboards can still refresh on demand regardless of plan.
 
 Cron availability and frequency depend on your Vercel plan. The browser-side refresh keeps an open dashboard current regardless.
+
+## Screener APIs
+
+- `GET /api/stocks?factor=quality&q=apple&sector=Technology&page=1&limit=50` returns a paginated category leaderboard.
+- `GET /api/stocks/compare?symbols=AAPL,MSFT,NVDA` returns two to five stocks with all six searchable factors and category winners.
+
+Searchable factors are `quality`, `earnings`, `momentum`, `billionaire`, `quietCompounder`, and `value`. Only the latest 12 composite Scanner picks are eligible for the paper portfolio.
 
 ## Important limitations
 

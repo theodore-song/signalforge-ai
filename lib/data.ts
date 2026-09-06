@@ -21,34 +21,49 @@ function modeledQuotes(bucket: number): Record<string, Quote> {
   );
 }
 
-async function alpacaQuotes(): Promise<Record<string, Quote> | null> {
-  const key = process.env.ALPACA_API_KEY;
-  const secret = process.env.ALPACA_API_SECRET;
-  if (!key || !secret) return null;
-  const symbols = UNIVERSE.map((stock) => stock.ticker.replace(".", "")).join(",");
+function chunks<T>(items: T[], size: number) {
+  const result: T[][] = [];
+  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
+  return result;
+}
+
+async function alpacaBatch(symbols: string[], key: string, secret: string): Promise<Record<string, Quote>> {
   try {
-    const response = await fetch(`https://data.alpaca.markets/v2/stocks/snapshots?symbols=${symbols}&feed=iex`, {
+    const response = await fetch(`https://data.alpaca.markets/v2/stocks/snapshots?symbols=${encodeURIComponent(symbols.join(","))}&feed=iex`, {
       headers: { "APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret },
-      next: { revalidate: 60 }
+      next: { revalidate: 60 },
+      signal: AbortSignal.timeout(8_000)
     });
-    if (!response.ok) return null;
+    if (!response.ok) return {};
     const json = await response.json() as { snapshots?: Record<string, { latestTrade?: { p: number }; dailyBar?: { c: number }; prevDailyBar?: { c: number } }> };
     const result: Record<string, Quote> = {};
-    for (const stock of UNIVERSE) {
-      const rawTicker = stock.ticker.replace(".", "");
-      const snapshot = json.snapshots?.[rawTicker];
+    for (const ticker of symbols) {
+      const snapshot = json.snapshots?.[ticker];
       const price = snapshot?.latestTrade?.p || snapshot?.dailyBar?.c;
       const previous = snapshot?.prevDailyBar?.c;
-      if (price && previous) result[stock.ticker] = { price, changePct: ((price / previous) - 1) * 100, source: "alpaca" };
+      if (price && previous) result[ticker] = { price, changePct: ((price / previous) - 1) * 100, source: "alpaca" };
     }
-    return Object.keys(result).length >= Math.floor(UNIVERSE.length / 2) ? result : null;
+    return result;
   } catch {
-    return null;
+    return {};
   }
 }
 
+async function alpacaQuotes(): Promise<Record<string, Quote>> {
+  const key = process.env.ALPACA_API_KEY;
+  const secret = process.env.ALPACA_API_SECRET;
+  if (!key || !secret) return {};
+  const batches = chunks(UNIVERSE.map((stock) => stock.ticker), 150);
+  const result: Record<string, Quote> = {};
+  for (let index = 0; index < batches.length; index += 4) {
+    const wave = await Promise.all(batches.slice(index, index + 4).map((batch) => alpacaBatch(batch, key, secret)));
+    Object.assign(result, ...wave);
+  }
+  return result;
+}
+
 export async function getQuotes(bucket: number) {
-  return (await alpacaQuotes()) || modeledQuotes(bucket);
+  return { ...modeledQuotes(bucket), ...(await alpacaQuotes()) };
 }
 
 export function makeSparkline(ticker: string, price: number, bucket: number) {

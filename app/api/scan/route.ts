@@ -9,6 +9,6 @@ export async function GET() {
 }
 
 export async function POST() {
-  const result = await runScan(true);
+  const result = await runScan(true, true);
   return NextResponse.json(result, { headers: { "Cache-Control": "no-store" } });
 }

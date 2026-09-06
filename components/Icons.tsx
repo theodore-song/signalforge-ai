@@ -8,3 +8,5 @@ export function ArrowIcon({ size, className }: IconProps) { return <svg {...base
 export function PlusIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><path d="M12 5v14M5 12h14"/></svg>; }
 export function RefreshIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><path d="M20 6v5h-5"/><path d="M4 18v-5h5"/><path d="M18.5 9A7 7 0 0 0 6 6.5L4 9m16 6-2 2.5A7 7 0 0 1 5.5 15"/></svg>; }
 export function CloseIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><path d="m6 6 12 12M18 6 6 18"/></svg>; }
+export function SearchIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>; }
+export function CompareIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><path d="M8 5h12M8 12h12M8 19h12"/><circle cx="4" cy="5" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="19" r="1" fill="currentColor"/></svg>; }

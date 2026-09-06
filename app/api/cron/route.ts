@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   if (secret && request.headers.get("authorization") !== `Bearer ${secret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const scan = await runScan(true);
+  const scan = await runScan(true, true);
   const persisted = await saveScan(scan);
   return NextResponse.json({ ok: true, scanId: scan.id, market: scan.market.label, persisted });
 }

@@ -1,5 +1,5 @@
 import { makeCommitteeBrief } from "./ai";
-import { getExternalScores, getQuotes, makeSparkline } from "./data";
+import { getExternalScores, getQuotes, makeSparkline, type Quote } from "./data";
 import { getMarketStatus, marketBucket } from "./market";
 import type { FactorSignal, ScanResult, StockPick, StrategyKey } from "./types";
 import { UNIVERSE, type UniverseStock } from "./universe";
@@ -14,6 +14,23 @@ const sourceFor: Record<StrategyKey, FactorSignal["source"]> = {
   quality: "fundamentals", momentum: "market", value: "fundamentals", earnings: "fundamentals",
   congress: "disclosure", billionaire: "filing", crowd: "crowd", insider: "filing",
   quietCompounder: "model", attentionGap: "model"
+};
+
+export type ScoredStock = {
+  stock: UniverseStock;
+  quote: Quote;
+  signals: FactorSignal[];
+  score: number;
+  thesis: string;
+};
+
+export type UniverseEvaluation = {
+  generatedAt: string;
+  bucket: number;
+  dataMode: "live" | "modeled";
+  dataNote: string;
+  stocks: ScoredStock[];
+  sources: ScanResult["sources"];
 };
 
 function clamp(value: number) { return Math.max(0, Math.min(100, Math.round(value))); }
@@ -56,8 +73,9 @@ function thesisFor(stock: UniverseStock, signals: FactorSignal[]) {
   return `${stock.company} screens strongly on ${best[0]} and ${best[1]}, with cross-signal agreement that reduces reliance on any single narrative.`;
 }
 
-export async function runScan(includeAi = false): Promise<ScanResult> {
-  const now = new Date();
+let cachedEvaluation: { bucket: number; value: Promise<UniverseEvaluation> } | null = null;
+
+async function calculateUniverse(now: Date): Promise<UniverseEvaluation> {
   const bucket = marketBucket(now);
   const [quotes, congress, billionaire, crowd] = await Promise.all([
     getQuotes(bucket),
@@ -65,30 +83,64 @@ export async function runScan(includeAi = false): Promise<ScanResult> {
     getExternalScores(process.env.INSTITUTIONAL_HOLDINGS_URL),
     getExternalScores(process.env.CROWD_SENTIMENT_URL)
   ]);
-  const live = Object.values(quotes).some((quote) => quote.source === "alpaca");
-  const ranked = UNIVERSE.map((stock) => {
+  const liveCount = Object.values(quotes).filter((quote) => quote.source === "alpaca").length;
+  const dataMode = liveCount > 0 ? "live" as const : "modeled" as const;
+  const stocks = UNIVERSE.map((stock) => {
     const quote = quotes[stock.ticker] || { price: stock.basePrice, changePct: 0, source: "modeled" as const };
     const signals = buildSignals(stock, quote.changePct, { congress: congress?.[stock.ticker], billionaire: billionaire?.[stock.ticker], crowd: crowd?.[stock.ticker] });
-    const score = scoreSignals(signals);
-    return { stock, quote, signals, score };
-  }).sort((a, b) => b.score - a.score).slice(0, 12);
+    return { stock, quote, signals, score: scoreSignals(signals), thesis: thesisFor(stock, signals) };
+  });
+  return {
+    generatedAt: now.toISOString(),
+    bucket,
+    dataMode,
+    dataNote: dataMode === "live"
+      ? `${liveCount.toLocaleString()} live IEX snapshots via Alpaca; missing quotes and unconnected alternative-data factors remain modeled.`
+      : "Demonstration dataset. Connect provider credentials before using this for live research.",
+    stocks,
+    sources: [
+      { label: "Market snapshots", status: dataMode === "live" ? "live" : "modeled" },
+      { label: "Congress disclosures", status: congress ? "live" : "not connected" },
+      { label: "13F institutional filings", status: billionaire ? "live" : "modeled" },
+      { label: "Crowd sentiment", status: crowd ? "live" : "modeled" }
+    ]
+  };
+}
 
-  const picks: StockPick[] = ranked.map(({ stock, quote, signals, score }, index) => ({
-    rank: index + 1,
-    ticker: stock.ticker,
-    company: stock.company,
-    sector: stock.sector,
-    price: Number(quote.price.toFixed(2)),
-    changePct: Number(quote.changePct.toFixed(2)),
-    score,
-    confidence: score >= 86 ? "High" : score >= 79 ? "Medium" : "Watch",
-    horizon: score >= 86 ? "3–12 months" : "1–6 months",
-    thesis: thesisFor(stock, signals),
-    risk: stock.risk,
+export function evaluateUniverse(forceFresh = false): Promise<UniverseEvaluation> {
+  const now = new Date();
+  const bucket = marketBucket(now);
+  if (!forceFresh && cachedEvaluation?.bucket === bucket) return cachedEvaluation.value;
+  const value = calculateUniverse(now);
+  cachedEvaluation = { bucket, value };
+  return value;
+}
+
+function toPick(item: ScoredStock, rank: number, bucket: number): StockPick {
+  return {
+    rank,
+    ticker: item.stock.ticker,
+    company: item.stock.company,
+    sector: item.stock.sector,
+    price: Number(item.quote.price.toFixed(2)),
+    changePct: Number(item.quote.changePct.toFixed(2)),
+    score: item.score,
+    confidence: item.score >= 86 ? "High" : item.score >= 79 ? "Medium" : "Watch",
+    horizon: item.score >= 86 ? "3–12 months" : "1–6 months",
+    thesis: item.thesis,
+    risk: item.stock.risk,
     suggestedWeight: 0,
-    signals: [...signals].sort((a, b) => b.score - a.score),
-    sparkline: makeSparkline(stock.ticker, quote.price, bucket)
-  }));
+    signals: [...item.signals].sort((a, b) => b.score - a.score),
+    sparkline: makeSparkline(item.stock.ticker, item.quote.price, bucket)
+  };
+}
+
+export async function runScan(includeAi = false, forceFresh = false): Promise<ScanResult> {
+  const evaluation = await evaluateUniverse(forceFresh);
+  const ranked = [...evaluation.stocks]
+    .sort((a, b) => b.score - a.score || a.stock.marketCapRank - b.stock.marketCapRank)
+    .slice(0, 12);
+  const picks = ranked.map((item, index) => toPick(item, index + 1, evaluation.bucket));
   const totalEdge = picks.reduce((sum, pick) => sum + Math.max(pick.score - 65, 3), 0);
   picks.forEach((pick) => { pick.suggestedWeight = Number(((Math.max(pick.score - 65, 3) / totalEdge) * 100).toFixed(1)); });
 
@@ -101,21 +153,16 @@ export async function runScan(includeAi = false): Promise<ScanResult> {
   const committeeBrief = includeAi ? await makeCommitteeBrief(picks, regime.label) : `${picks.slice(0, 3).map((pick) => pick.ticker).join(", ")} lead the current ranking. The model favors independent signal agreement and penalizes crowded, expensive momentum.`;
 
   return {
-    id: `scan-${bucket}`,
-    generatedAt: now.toISOString(),
-    dataMode: live ? "live" : "modeled",
-    dataNote: live ? "Live IEX snapshots via Alpaca; unconnected alternative-data factors remain modeled." : "Demonstration dataset. Connect provider credentials before using this for live research.",
+    id: `scan-${evaluation.bucket}`,
+    generatedAt: evaluation.generatedAt,
+    dataMode: evaluation.dataMode,
+    dataNote: evaluation.dataNote,
     universeSize: UNIVERSE.length,
-    market: getMarketStatus(now),
+    market: getMarketStatus(new Date(evaluation.generatedAt)),
     regime,
     breadth: Math.round((ranked.filter((item) => item.quote.changePct > 0).length / ranked.length) * 100),
     picks,
     committeeBrief,
-    sources: [
-      { label: "Market snapshots", status: live ? "live" : "modeled" },
-      { label: "Congress disclosures", status: congress ? "live" : "not connected" },
-      { label: "13F institutional filings", status: billionaire ? "live" : "modeled" },
-      { label: "Crowd sentiment", status: crowd ? "live" : "modeled" }
-    ]
+    sources: evaluation.sources
   };
 }

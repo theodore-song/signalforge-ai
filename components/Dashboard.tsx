@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { PortfolioHolding, ScanResult, StockPick } from "@/lib/types";
 import { ArrowIcon, CloseIcon, PlusIcon, RadarIcon, RefreshIcon, ShieldIcon, SparkIcon } from "./Icons";
 import Sparkline from "./Sparkline";
+import SearchWorkspace from "./SearchWorkspace";
 
 const strategyCards = [
   ["Quality × Momentum", "Expert", "Profitable leaders with trend confirmation; avoids cheap stocks with deteriorating businesses."],
@@ -29,7 +30,7 @@ function timeAgo(date: string, now: number) {
 export default function Dashboard({ initialScan }: { initialScan: ScanResult }) {
   const [scan, setScan] = useState(initialScan);
   const [selected, setSelected] = useState<StockPick>(initialScan.picks[0]);
-  const [activeTab, setActiveTab] = useState<"scanner" | "portfolio" | "strategies">("scanner");
+  const [activeTab, setActiveTab] = useState<"scanner" | "search" | "portfolio" | "strategies">("scanner");
   const [scanning, setScanning] = useState(false);
   const [capital, setCapital] = useState(100000);
   const [size, setSize] = useState(8);
@@ -107,6 +108,16 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
     window.setTimeout(() => setToast(""), 2400);
   }
 
+  function addSearchSuggestion(ticker: string) {
+    const pick = scan.picks.find((candidate) => candidate.ticker === ticker);
+    if (!pick) {
+      setToast(`${ticker} is no longer in the current composite shortlist`);
+      window.setTimeout(() => setToast(""), 2400);
+      return;
+    }
+    addHolding(pick);
+  }
+
   const portfolioValue = useMemo(() => portfolio.reduce((sum, item) => {
     const live = scan.picks.find((pick) => pick.ticker === item.ticker)?.price || item.currentPrice;
     return sum + item.shares * live;
@@ -119,6 +130,7 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
         <button className="brand" onClick={() => setActiveTab("scanner")}><span className="brand-mark"><RadarIcon size={21}/></span><span>SignalForge <b>AI</b></span></button>
         <nav aria-label="Primary navigation">
           <button className={activeTab === "scanner" ? "active" : ""} onClick={() => setActiveTab("scanner")}>Scanner</button>
+          <button className={activeTab === "search" ? "active" : ""} onClick={() => setActiveTab("search")}>Search</button>
           <button className={activeTab === "portfolio" ? "active" : ""} onClick={() => setActiveTab("portfolio")}>Portfolio <span className="nav-count">{portfolio.length}</span></button>
           <button className={activeTab === "strategies" ? "active" : ""} onClick={() => setActiveTab("strategies")}>Strategies</button>
         </nav>
@@ -172,6 +184,8 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
           <div className="builder-controls"><label>Starting capital<span><input type="number" min="1000" step="1000" value={capital} onChange={(event) => setCapital(Math.max(1000, Number(event.target.value)))}/><b>USD</b></span></label><label>Number of positions<span><input type="range" min="4" max="12" value={size} onChange={(event) => setSize(Number(event.target.value))}/><b>{size}</b></span></label><button className="primary wide" onClick={buildPortfolio}>Build AI paper portfolio <ArrowIcon size={17}/></button></div>
         </section>
       </>}
+
+      {activeTab === "search" && <SearchWorkspace onAdd={addSearchSuggestion} portfolioTickers={portfolio.map((holding) => holding.ticker)}/>}
 
       {activeTab === "portfolio" && <section className="shell page-section">
         <div className="page-hero"><span className="kicker">PAPER PORTFOLIO</span><h1>Your AI research basket.</h1><p>A local, simulation-only portfolio made exclusively from SignalForge suggestions.</p></div>

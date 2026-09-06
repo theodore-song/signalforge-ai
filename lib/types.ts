@@ -10,6 +10,18 @@ export type StrategyKey =
   | "quietCompounder"
   | "attentionGap";
 
+export const SEARCH_FACTORS = ["quality", "earnings", "momentum", "billionaire", "quietCompounder", "value"] as const;
+export type SearchFactorKey = (typeof SEARCH_FACTORS)[number];
+
+export const SEARCH_FACTOR_LABELS: Record<SearchFactorKey, string> = {
+  quality: "Quality moat",
+  earnings: "Earnings revisions",
+  momentum: "Price momentum",
+  billionaire: "13F conviction",
+  quietCompounder: "Quiet compounder",
+  value: "Valuation"
+};
+
 export type FactorSignal = {
   key: StrategyKey;
   label: string;
@@ -64,4 +76,67 @@ export type PortfolioHolding = {
   currentPrice: number;
   weight: number;
   score: number;
+};
+
+export type UniverseSecurity = {
+  ticker: string;
+  company: string;
+  sector: string;
+  industry: string;
+  country: string;
+  marketCap: number;
+  marketCapRank: number;
+  basePrice: number;
+  isAdr: boolean;
+};
+
+export type ScreenerRow = {
+  ticker: string;
+  company: string;
+  sector: string;
+  industry: string;
+  country: string;
+  marketCap: number;
+  marketCapRank: number;
+  price: number;
+  changePct: number;
+  compositeScore: number;
+  categoryRank: number;
+  selectedFactor: SearchFactorKey;
+  selectedScore: number;
+  factorScores: Record<SearchFactorKey, number>;
+  provenance: Record<SearchFactorKey, FactorSignal["source"]>;
+  factorStatus: Record<SearchFactorKey, "live" | "modeled">;
+  portfolioEligible: boolean;
+  thesis: string;
+  risk: string;
+};
+
+export type ScreenerResponse = {
+  generatedAt: string;
+  universeAsOf: string;
+  universeSize: number;
+  dataMode: "live" | "modeled";
+  dataNote: string;
+  factor: SearchFactorKey;
+  query: string;
+  sector: string;
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  sectors: string[];
+  rows: ScreenerRow[];
+};
+
+export type ComparisonItem =
+  | ({ found: true } & Omit<ScreenerRow, "categoryRank" | "selectedFactor" | "selectedScore">)
+  | { found: false; ticker: string };
+
+export type ComparisonResponse = {
+  generatedAt: string;
+  universeAsOf: string;
+  dataMode: "live" | "modeled";
+  items: ComparisonItem[];
+  winners: Record<SearchFactorKey, string[]>;
 };

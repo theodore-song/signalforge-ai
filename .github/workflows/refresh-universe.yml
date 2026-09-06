@@ -1,0 +1,33 @@
+name: Refresh stock universe
+
+on:
+  schedule:
+    - cron: "17 13 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run refresh:universe
+      - run: npm test
+      - name: Commit validated membership changes
+        run: |
+          if git diff --quiet -- lib/universe.generated.json; then
+            echo "Universe membership is unchanged."
+            exit 0
+          fi
+          git config user.name "signalforge-universe-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add lib/universe.generated.json
+          git commit -m "Refresh 2,000-stock universe"
+          git push
