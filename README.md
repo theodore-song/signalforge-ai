@@ -56,11 +56,11 @@ Cron availability and frequency depend on your Vercel plan. The browser-side ref
 - `GET /api/stocks?factor=quality&q=apple&sector=Technology&page=1&limit=50` returns a paginated category leaderboard.
 - `GET /api/stocks/compare?symbols=AAPL,MSFT,NVDA` returns two to five stocks with all six searchable factors and category winners.
 
-Searchable factors are `quality`, `earnings`, `momentum`, `billionaire`, `quietCompounder`, and `value`. Only the latest 12 composite Scanner picks are eligible for the paper portfolio.
+Searchable factors are `quality`, `earnings`, `momentum`, `billionaire`, `quietCompounder`, and `value`. Every stock in the 2,000-name research universe is eligible for paper trading; the Scanner remains the focused 12-stock composite shortlist.
 
 ## Paper brokerage
 
-Visitors can create a cash-only simulated account or generate an AI starter portfolio that retains a 15% cash reserve. Buys support fractional shares and remain limited to the current 12-name Scanner shortlist. Owned shares can always be sold, even after a ticker leaves the shortlist. Repeat buys update weighted average cost; sells update cash and realized P&L; complete trade history remains stored locally in the browser. Existing position-only portfolios are migrated automatically.
+Visitors can create a cash-only simulated account or generate an AI starter portfolio that retains a 15% cash reserve. Buys support fractional shares across the complete 2,000-stock universe: open any company from any Search category to prefill its trade ticket. Repeat buys update weighted average cost; sells update cash and realized P&L; complete trade history remains stored locally in the browser. Existing position-only portfolios are migrated automatically.
 
 ## Important limitations
 

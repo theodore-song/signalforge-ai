@@ -39,9 +39,11 @@ test("comparison preserves order, reports unknowns, and identifies winners", asy
   Object.values(comparison.winners).forEach((winners) => assert.ok(winners.length >= 1));
 });
 
-test("only the 12 composite scanner picks are portfolio eligible", async () => {
+test("the full research universe is paper-trade eligible while Scanner stays at 12 picks", async () => {
   const scan = await runScan(false);
-  const comparison = await compareStocks(scan.picks.slice(0, 5).map((pick) => pick.ticker));
+  const firstPage = await queryScreener({ factor: "value", limit: 100 });
+  assert.ok(firstPage.rows.every((row) => row.portfolioEligible));
+  const comparison = await compareStocks(["AAPL", "BKE"]);
   comparison.items.forEach((item) => assert.ok(item.found && item.portfolioEligible));
   assert.equal(scan.picks.length, 12);
 });

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { PaperPortfolioAccount, ScanResult, StockPick } from "@/lib/types";
-import { createAiAccount, createCashAccount, migratePaperAccount } from "@/lib/portfolio";
+import { createAiAccount, createCashAccount, migratePaperAccount, type TradeQuote } from "@/lib/portfolio";
 import { ArrowIcon, PlusIcon, RadarIcon, RefreshIcon, ShieldIcon, SparkIcon } from "./Icons";
 import Sparkline from "./Sparkline";
 import SearchWorkspace from "./SearchWorkspace";
@@ -38,6 +38,7 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
   const [size, setSize] = useState(8);
   const [account, setAccount] = useState<PaperPortfolioAccount | null>(null);
   const [tradeTicker, setTradeTicker] = useState<string | null>(null);
+  const [categoryQuotes, setCategoryQuotes] = useState<TradeQuote[]>([]);
   const [toast, setToast] = useState("");
   const [clock, setClock] = useState<number | null>(null);
 
@@ -96,8 +97,9 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
     }
   }
 
-  function openTradeTicket(pick: StockPick) {
-    setTradeTicker(pick.ticker);
+  function openTradeTicket(quote: TradeQuote) {
+    setCategoryQuotes((current) => [quote, ...current.filter((item) => item.ticker !== quote.ticker)]);
+    setTradeTicker(quote.ticker);
     setActiveTab("portfolio");
   }
 
@@ -109,15 +111,13 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
     setActiveTab("portfolio");
   }
 
-  function addSearchSuggestion(ticker: string) {
-    const pick = scan.picks.find((candidate) => candidate.ticker === ticker);
-    if (!pick) {
-      setToast(`${ticker} is no longer in the current composite shortlist`);
-      window.setTimeout(() => setToast(""), 2400);
-      return;
-    }
-    openTradeTicket(pick);
-  }
+  const tradeableQuotes = useMemo(() => {
+    const quotes = new Map<string, TradeQuote>();
+    account?.holdings.forEach((holding) => quotes.set(holding.ticker, { ticker: holding.ticker, company: holding.company, price: holding.currentPrice, score: holding.score }));
+    categoryQuotes.forEach((quote) => quotes.set(quote.ticker, quote));
+    scan.picks.forEach((pick) => quotes.set(pick.ticker, pick));
+    return [...quotes.values()];
+  }, [account, categoryQuotes, scan.picks]);
 
   return (
     <main>
@@ -180,9 +180,9 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
         </section>
       </>}
 
-      {activeTab === "search" && <SearchWorkspace onAdd={addSearchSuggestion} portfolioTickers={account?.holdings.map((holding) => holding.ticker) || []}/>}
+      {activeTab === "search" && <SearchWorkspace onTrade={openTradeTicket} portfolioTickers={account?.holdings.map((holding) => holding.ticker) || []}/>}
 
-      {activeTab === "portfolio" && <PaperPortfolio account={account} eligiblePicks={scan.picks} requestedTicker={tradeTicker} defaultCapital={capital} onCreateCashAccount={(amount) => { persist(createCashAccount(amount)); announce(`Paper account opened with ${formatMoney(amount)} cash`); }} onChange={persist} onOpenScanner={() => setActiveTab("scanner")} onToast={announce}/>}
+      {activeTab === "portfolio" && <PaperPortfolio account={account} tradeableQuotes={tradeableQuotes} requestedTicker={tradeTicker} defaultCapital={capital} onCreateCashAccount={(amount) => { persist(createCashAccount(amount)); announce(`Paper account opened with ${formatMoney(amount)} cash`); }} onChange={persist} onOpenSearch={() => setActiveTab("search")} onToast={announce}/>}
 
       {activeTab === "strategies" && <section className="shell page-section">
         <div className="page-hero"><span className="kicker">STRATEGY LIBRARY</span><h1>Ten lenses. One auditable score.</h1><p>No single strategy gets to dominate. The engine looks for independent agreement and displays every component.</p></div>

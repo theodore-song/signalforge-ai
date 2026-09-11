@@ -32,16 +32,7 @@ function factorRecord<T>(makeValue: (factor: SearchFactorKey) => T) {
   return Object.fromEntries(SEARCH_FACTORS.map((factor) => [factor, makeValue(factor)])) as Record<SearchFactorKey, T>;
 }
 
-function eligibleTickers(evaluation: UniverseEvaluation) {
-  return new Set(
-    [...evaluation.stocks]
-      .sort((a, b) => b.score - a.score || a.stock.marketCapRank - b.stock.marketCapRank)
-      .slice(0, 12)
-      .map((item) => item.stock.ticker)
-  );
-}
-
-function toRow(item: ScoredStock, factor: SearchFactorKey, categoryRank: number, eligible: Set<string>, evaluation: UniverseEvaluation): ScreenerRow {
+function toRow(item: ScoredStock, factor: SearchFactorKey, categoryRank: number, evaluation: UniverseEvaluation): ScreenerRow {
   const selected = signalFor(item, factor);
   return {
     ticker: item.stock.ticker,
@@ -60,7 +51,7 @@ function toRow(item: ScoredStock, factor: SearchFactorKey, categoryRank: number,
     factorScores: factorRecord((key) => signalFor(item, key).score),
     provenance: factorRecord((key) => signalFor(item, key).source),
     factorStatus: factorStatuses(item, evaluation),
-    portfolioEligible: eligible.has(item.stock.ticker),
+    portfolioEligible: true,
     thesis: item.thesis,
     risk: item.stock.risk
   };
@@ -77,10 +68,9 @@ export async function queryScreener(options: ScreenerQuery): Promise<ScreenerRes
   const sector = options.sector || "All sectors";
   const page = options.page || 1;
   const limit = options.limit || 50;
-  const eligible = eligibleTickers(evaluation);
   const ranked = [...evaluation.stocks]
     .sort((a, b) => signalFor(b, factor).score - signalFor(a, factor).score || b.score - a.score || a.stock.marketCapRank - b.stock.marketCapRank)
-    .map((item, index) => toRow(item, factor, index + 1, eligible, evaluation));
+    .map((item, index) => toRow(item, factor, index + 1, evaluation));
   const lowerQuery = query.toLocaleLowerCase();
   const filtered = ranked.filter((row) => {
     const queryMatches = !lowerQuery || row.ticker.toLocaleLowerCase().includes(lowerQuery) || row.company.toLocaleLowerCase().includes(lowerQuery);
@@ -108,12 +98,11 @@ export async function queryScreener(options: ScreenerQuery): Promise<ScreenerRes
 
 export async function compareStocks(symbols: string[]): Promise<ComparisonResponse> {
   const evaluation = await evaluateUniverse();
-  const eligible = eligibleTickers(evaluation);
   const byTicker = new Map(evaluation.stocks.map((item) => [item.stock.ticker, item]));
   const rows = symbols.map((ticker) => {
     const item = byTicker.get(ticker);
     if (!item) return { found: false as const, ticker };
-    const row = toRow(item, "quality", 0, eligible, evaluation);
+    const row = toRow(item, "quality", 0, evaluation);
     const { categoryRank: _categoryRank, selectedFactor: _selectedFactor, selectedScore: _selectedScore, ...comparisonRow } = row;
     return { found: true as const, ...comparisonRow };
   });

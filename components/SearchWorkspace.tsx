@@ -25,7 +25,7 @@ function ScoreBar({ score }: { score: number }) {
   return <span className="search-score"><b>{score}</b><span><i style={{ width: `${score}%` }}/></span></span>;
 }
 
-export default function SearchWorkspace({ onAdd, portfolioTickers }: { onAdd: (ticker: string) => void; portfolioTickers: string[] }) {
+export default function SearchWorkspace({ onTrade, portfolioTickers }: { onTrade: (quote: { ticker: string; company: string; price: number; score: number }) => void; portfolioTickers: string[] }) {
   const [factor, setFactor] = useState<SearchFactorKey>("quality");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -139,7 +139,7 @@ export default function SearchWorkspace({ onAdd, portfolioTickers }: { onAdd: (t
             <p className="thesis">{selected.thesis}</p>
             <div className="research-factors">{SEARCH_FACTORS.map((key) => <div key={key} className={key === factor ? "active" : ""}><span><b>{SEARCH_FACTOR_LABELS[key]}</b><small>{selected.factorStatus[key]} · {selected.provenance[key]}</small></span><span className="factor-bar"><i style={{width: `${selected.factorScores[key]}%`}}/></span><strong>{selected.factorScores[key]}</strong></div>)}</div>
             <div className="risk-box"><ShieldIcon size={17}/><div><b>Research risk</b><p>{selected.risk}</p></div></div>
-            {selected.portfolioEligible ? <button className="primary detail-add" onClick={() => onAdd(selected.ticker)}><PlusIcon size={16}/>{portfolioSet.has(selected.ticker) ? "Trade existing position" : "Open paper trade ticket"}</button> : <div className="eligibility-note"><b>Category leader, not a portfolio pick</b><span>This stock is not in the latest 12-name composite shortlist.</span></div>}
+            <button className="primary detail-add" onClick={() => onTrade({ ticker: selected.ticker, company: selected.company, price: selected.price, score: selected.compositeScore })}><PlusIcon size={16}/>{portfolioSet.has(selected.ticker) ? "Trade existing position" : "Open paper trade ticket"}</button>
           </> : <div className="no-results"><SearchIcon size={28}/><b>Select a stock</b><span>Open a result to inspect all six factors.</span></div>}
         </aside>
       </div>
@@ -157,7 +157,7 @@ export default function SearchWorkspace({ onAdd, portfolioTickers }: { onAdd: (t
             return <div className={`comparison-value ${winner ? "winner" : ""}`} key={item.ticker}>{item.found ? <><strong>{item.factorScores[key]}</strong><span className="factor-bar"><i style={{width: `${item.factorScores[key]}%`}}/></span><small>{winner ? "Category leader" : item.factorStatus[key]}</small></> : <span>—</span>}</div>;
           })}
         </div>)}
-        <div className="comparison-row summary-row"><div className="comparison-label"><b>Composite score</b><small>All ten signals combined</small></div>{comparison.items.map((item) => <div className="comparison-value" key={item.ticker}><strong>{item.found ? item.compositeScore : "—"}</strong>{item.found && <small>{item.portfolioEligible ? "Portfolio eligible" : "Research only"}</small>}</div>)}</div>
+        <div className="comparison-row summary-row"><div className="comparison-label"><b>Composite score</b><small>All ten signals combined</small></div>{comparison.items.map((item) => <div className="comparison-value" key={item.ticker}><strong>{item.found ? item.compositeScore : "—"}</strong>{item.found && <small>Paper-trade eligible</small>}</div>)}</div>
       </div>
     </div>}
     <div className="search-disclaimer"><ShieldIcon size={17}/><span>{data?.dataNote || "Scores are loading."} Rankings are research outputs, not forecasts or personalized investment advice.</span></div>

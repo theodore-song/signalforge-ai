@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { accountMetrics, buyStock, sellStock } from "@/lib/portfolio";
-import type { PaperPortfolioAccount, StockPick } from "@/lib/types";
+import { accountMetrics, buyStock, sellStock, type TradeQuote } from "@/lib/portfolio";
+import type { PaperPortfolioAccount } from "@/lib/types";
 import { ArrowIcon, PlusIcon, RadarIcon, ShieldIcon } from "./Icons";
 
 function money(value: number) {
@@ -19,29 +19,29 @@ function signedMoney(value: number) {
 
 type Props = {
   account: PaperPortfolioAccount | null;
-  eligiblePicks: StockPick[];
+  tradeableQuotes: TradeQuote[];
   requestedTicker: string | null;
   defaultCapital: number;
   onCreateCashAccount: (capital: number) => void;
   onChange: (account: PaperPortfolioAccount) => void;
-  onOpenScanner: () => void;
+  onOpenSearch: () => void;
   onToast: (message: string) => void;
 };
 
-export default function PaperPortfolio({ account, eligiblePicks, requestedTicker, defaultCapital, onCreateCashAccount, onChange, onOpenScanner, onToast }: Props) {
+export default function PaperPortfolio({ account, tradeableQuotes, requestedTicker, defaultCapital, onCreateCashAccount, onChange, onOpenSearch, onToast }: Props) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
-  const [symbol, setSymbol] = useState(requestedTicker || eligiblePicks[0]?.ticker || "");
+  const [symbol, setSymbol] = useState(requestedTicker || tradeableQuotes[0]?.ticker || "");
   const [quantity, setQuantity] = useState("");
   const [openingCash, setOpeningCash] = useState(defaultCapital);
 
-  const priceMap = useMemo(() => Object.fromEntries(eligiblePicks.map((pick) => [pick.ticker, pick.price])), [eligiblePicks]);
+  const priceMap = useMemo(() => Object.fromEntries(tradeableQuotes.map((quote) => [quote.ticker, quote.price])), [tradeableQuotes]);
   const metrics = useMemo(() => account ? accountMetrics(account, priceMap) : null, [account, priceMap]);
   const held = account?.holdings.find((holding) => holding.ticker === symbol);
-  const pick = eligiblePicks.find((candidate) => candidate.ticker === symbol);
+  const pick = tradeableQuotes.find((candidate) => candidate.ticker === symbol);
   const quotePrice = pick?.price || held?.currentPrice || 0;
   const numericQuantity = Number(quantity);
   const notional = Number.isFinite(numericQuantity) ? numericQuantity * quotePrice : 0;
-  const options = side === "buy" ? eligiblePicks : account?.holdings || [];
+  const options = side === "buy" ? tradeableQuotes : account?.holdings || [];
 
   useEffect(() => {
     if (!requestedTicker) return;
@@ -59,7 +59,7 @@ export default function PaperPortfolio({ account, eligiblePicks, requestedTicker
   function changeSide(next: "buy" | "sell") {
     setSide(next);
     setQuantity("");
-    const nextOptions = next === "buy" ? eligiblePicks : account?.holdings || [];
+    const nextOptions = next === "buy" ? tradeableQuotes : account?.holdings || [];
     if (!nextOptions.some((option) => option.ticker === symbol)) setSymbol(nextOptions[0]?.ticker || "");
   }
 
@@ -99,7 +99,7 @@ export default function PaperPortfolio({ account, eligiblePicks, requestedTicker
       <label>OPENING CASH BALANCE<span><b>$</b><input aria-label="Opening cash balance" type="number" min="1000" step="1000" value={openingCash} onChange={(event) => setOpeningCash(Math.max(1000, Number(event.target.value)))}/><small>USD</small></span></label>
       <button className="primary" onClick={() => onCreateCashAccount(openingCash)}><PlusIcon size={16}/> Create paper account</button>
     </div>
-    <div className="portfolio-guardrail"><ShieldIcon size={18}/><span>Only stocks in the latest AI Scanner shortlist can be purchased. Any position you already own can always be sold, even if it later leaves the shortlist.</span></div>
+    <div className="portfolio-guardrail"><ShieldIcon size={18}/><span>Every stock in the 2,000-name research universe can be purchased. Open any category result in Search to prefill its paper trade ticket.</span></div>
   </section>;
 
   return <section className="shell page-section portfolio-page">
@@ -136,7 +136,7 @@ export default function PaperPortfolio({ account, eligiblePicks, requestedTicker
               <button aria-label={`Trade ${holding.ticker}`} onClick={() => tradeHolding(holding.ticker)}>Trade</button>
             </div>;
           })}
-        </div> : <div className="positions-empty"><RadarIcon size={32}/><div><b>Your account is fully in cash.</b><span>Use the trade ticket to buy an eligible AI suggestion.</span></div></div>}
+        </div> : <div className="positions-empty"><RadarIcon size={32}/><div><b>Your account is fully in cash.</b><span>Browse Search categories, then open any stock in the trade ticket.</span></div></div>}
       </div>
 
       <aside className="order-ticket">
@@ -156,6 +156,6 @@ export default function PaperPortfolio({ account, eligiblePicks, requestedTicker
       {account.transactions.length ? <div className="activity-list"><div className="activity-row header"><span>Type</span><span>Security</span><span>Shares</span><span>Price</span><span>Total</span><span>Realized P&amp;L</span><span>Executed</span></div>{account.transactions.slice(0, 20).map((transaction) => <div className="activity-row" key={transaction.id}><span><b className={`transaction-side ${transaction.side.toLowerCase()}`}>{transaction.side}</b></span><span><b>{transaction.ticker}</b><small>{transaction.company}</small></span><span data-label="Shares">{shares(transaction.shares)}</span><span data-label="Price">{money(transaction.price)}</span><span data-label="Total">{money(transaction.total)}</span><span data-label="Realized P&L" className={transaction.realizedPnl >= 0 ? "positive" : "negative"}>{transaction.side === "SELL" ? signedMoney(transaction.realizedPnl) : "—"}</span><span data-label="Executed">{new Date(transaction.executedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span></div>)}</div> : <div className="positions-empty"><ShieldIcon size={28}/><div><b>No trades yet.</b><span>Your first buy or sell will appear here.</span></div></div>}
     </div>
 
-    <div className="portfolio-guardrail"><ShieldIcon size={18}/><span>Purchases remain limited to the latest 12-name Scanner shortlist. Selling is always available for owned positions; nothing is deleted from account history.</span><button onClick={onOpenScanner}>View eligible stocks</button></div>
+    <div className="portfolio-guardrail"><ShieldIcon size={18}/><span>All 2,000 researched stocks are paper-trade eligible. Selling is always available for owned positions, and nothing is deleted from account history.</span><button onClick={onOpenSearch}>Browse all stocks</button></div>
   </section>;
 }
