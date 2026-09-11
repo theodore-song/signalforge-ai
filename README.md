@@ -9,7 +9,7 @@ SignalForge is a public, Vercel-ready stock research dashboard. It combines expe
 - Ten-factor explainable scoring and risk cases
 - Search tab with six factor leaderboards, ticker/company search, sector filters, pagination, and five-stock comparison
 - Fresh scan endpoint with optional OpenAI investment-committee brief
-- AI-suggested-only paper portfolio stored in the visitor's browser
+- Persistent paper brokerage account with cash, fractional buy/sell orders, cost basis, P&L, and trade history
 - Automatic browser refresh every 60 seconds during the regular US session
 - Vercel Cron endpoint plus optional Upstash/Vercel KV persistence
 - Optional live Alpaca IEX snapshots and external alternative-data feed adapters
@@ -57,6 +57,10 @@ Cron availability and frequency depend on your Vercel plan. The browser-side ref
 - `GET /api/stocks/compare?symbols=AAPL,MSFT,NVDA` returns two to five stocks with all six searchable factors and category winners.
 
 Searchable factors are `quality`, `earnings`, `momentum`, `billionaire`, `quietCompounder`, and `value`. Only the latest 12 composite Scanner picks are eligible for the paper portfolio.
+
+## Paper brokerage
+
+Visitors can create a cash-only simulated account or generate an AI starter portfolio that retains a 15% cash reserve. Buys support fractional shares and remain limited to the current 12-name Scanner shortlist. Owned shares can always be sold, even after a ticker leaves the shortlist. Repeat buys update weighted average cost; sells update cash and realized P&L; complete trade history remains stored locally in the browser. Existing position-only portfolios are migrated automatically.
 
 ## Important limitations
 

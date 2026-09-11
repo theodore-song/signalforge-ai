@@ -72,10 +72,33 @@ export type PortfolioHolding = {
   ticker: string;
   company: string;
   shares: number;
-  entryPrice: number;
+  averageCost: number;
   currentPrice: number;
-  weight: number;
   score: number;
+  openedAt: string;
+};
+
+export type PortfolioTransaction = {
+  id: string;
+  side: "BUY" | "SELL" | "OPENING";
+  ticker: string;
+  company: string;
+  shares: number;
+  price: number;
+  total: number;
+  realizedPnl: number;
+  executedAt: string;
+};
+
+export type PaperPortfolioAccount = {
+  version: 2;
+  startingBalance: number;
+  cash: number;
+  realizedPnl: number;
+  holdings: PortfolioHolding[];
+  transactions: PortfolioTransaction[];
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type UniverseSecurity = {

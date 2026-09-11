@@ -139,7 +139,7 @@ export default function SearchWorkspace({ onAdd, portfolioTickers }: { onAdd: (t
             <p className="thesis">{selected.thesis}</p>
             <div className="research-factors">{SEARCH_FACTORS.map((key) => <div key={key} className={key === factor ? "active" : ""}><span><b>{SEARCH_FACTOR_LABELS[key]}</b><small>{selected.factorStatus[key]} · {selected.provenance[key]}</small></span><span className="factor-bar"><i style={{width: `${selected.factorScores[key]}%`}}/></span><strong>{selected.factorScores[key]}</strong></div>)}</div>
             <div className="risk-box"><ShieldIcon size={17}/><div><b>Research risk</b><p>{selected.risk}</p></div></div>
-            {selected.portfolioEligible ? <button className="primary detail-add" onClick={() => onAdd(selected.ticker)} disabled={portfolioSet.has(selected.ticker)}><PlusIcon size={16}/>{portfolioSet.has(selected.ticker) ? "Already in paper portfolio" : "Add eligible AI suggestion"}</button> : <div className="eligibility-note"><b>Category leader, not a portfolio pick</b><span>This stock is not in the latest 12-name composite shortlist.</span></div>}
+            {selected.portfolioEligible ? <button className="primary detail-add" onClick={() => onAdd(selected.ticker)}><PlusIcon size={16}/>{portfolioSet.has(selected.ticker) ? "Trade existing position" : "Open paper trade ticket"}</button> : <div className="eligibility-note"><b>Category leader, not a portfolio pick</b><span>This stock is not in the latest 12-name composite shortlist.</span></div>}
           </> : <div className="no-results"><SearchIcon size={28}/><b>Select a stock</b><span>Open a result to inspect all six factors.</span></div>}
         </aside>
       </div>

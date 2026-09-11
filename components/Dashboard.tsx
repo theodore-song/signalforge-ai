@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { PortfolioHolding, ScanResult, StockPick } from "@/lib/types";
-import { ArrowIcon, CloseIcon, PlusIcon, RadarIcon, RefreshIcon, ShieldIcon, SparkIcon } from "./Icons";
+import { useEffect, useState } from "react";
+import type { PaperPortfolioAccount, ScanResult, StockPick } from "@/lib/types";
+import { createAiAccount, createCashAccount, migratePaperAccount } from "@/lib/portfolio";
+import { ArrowIcon, PlusIcon, RadarIcon, RefreshIcon, ShieldIcon, SparkIcon } from "./Icons";
 import Sparkline from "./Sparkline";
 import SearchWorkspace from "./SearchWorkspace";
+import PaperPortfolio from "./PaperPortfolio";
 
 const strategyCards = [
   ["Quality × Momentum", "Expert", "Profitable leaders with trend confirmation; avoids cheap stocks with deteriorating businesses."],
@@ -34,14 +36,21 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
   const [scanning, setScanning] = useState(false);
   const [capital, setCapital] = useState(100000);
   const [size, setSize] = useState(8);
-  const [portfolio, setPortfolio] = useState<PortfolioHolding[]>([]);
+  const [account, setAccount] = useState<PaperPortfolioAccount | null>(null);
+  const [tradeTicker, setTradeTicker] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const [clock, setClock] = useState<number | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("signalforge-paper-portfolio");
     if (stored) {
-      try { setPortfolio(JSON.parse(stored)); } catch { /* ignore corrupt local state */ }
+      try {
+        const migrated = migratePaperAccount(JSON.parse(stored), 100_000);
+        if (migrated) {
+          setAccount(migrated);
+          localStorage.setItem("signalforge-paper-portfolio", JSON.stringify(migrated));
+        }
+      } catch { /* ignore corrupt local state */ }
     }
   }, []);
 
@@ -60,9 +69,14 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
     return () => window.clearInterval(timer);
   }, [scan.market.isOpen]);
 
-  function persist(next: PortfolioHolding[]) {
-    setPortfolio(next);
+  function persist(next: PaperPortfolioAccount) {
+    setAccount(next);
     localStorage.setItem("signalforge-paper-portfolio", JSON.stringify(next));
+  }
+
+  function announce(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(""), 2600);
   }
 
   async function runFreshScan() {
@@ -82,30 +96,17 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
     }
   }
 
-  function addHolding(pick: StockPick) {
-    if (portfolio.some((item) => item.ticker === pick.ticker)) {
-      setToast(`${pick.ticker} is already in the paper portfolio`);
-      window.setTimeout(() => setToast(""), 2200);
-      return;
-    }
-    const budget = capital * Math.max(pick.suggestedWeight / 100, 0.05);
-    const holding: PortfolioHolding = { ticker: pick.ticker, company: pick.company, shares: Number((budget / pick.price).toFixed(3)), entryPrice: pick.price, currentPrice: pick.price, weight: pick.suggestedWeight, score: pick.score };
-    persist([...portfolio, holding]);
-    setToast(`${pick.ticker} added to your paper portfolio`);
-    window.setTimeout(() => setToast(""), 2200);
+  function openTradeTicket(pick: StockPick) {
+    setTradeTicker(pick.ticker);
+    setActiveTab("portfolio");
   }
 
   function buildPortfolio() {
-    const chosen = scan.picks.slice(0, size);
-    const scoreTotal = chosen.reduce((sum, pick) => sum + Math.max(pick.score - 60, 5), 0);
-    const next = chosen.map((pick) => {
-      const weight = Math.max(pick.score - 60, 5) / scoreTotal;
-      return { ticker: pick.ticker, company: pick.company, shares: Number(((capital * weight) / pick.price).toFixed(3)), entryPrice: pick.price, currentPrice: pick.price, weight: Number((weight * 100).toFixed(1)), score: pick.score };
-    });
-    persist(next);
+    if (!account) {
+      persist(createAiAccount(scan.picks, capital, size));
+      announce("AI paper portfolio created with a 15% cash reserve");
+    }
     setActiveTab("portfolio");
-    setToast("AI paper portfolio created");
-    window.setTimeout(() => setToast(""), 2400);
   }
 
   function addSearchSuggestion(ticker: string) {
@@ -115,14 +116,8 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
       window.setTimeout(() => setToast(""), 2400);
       return;
     }
-    addHolding(pick);
+    openTradeTicket(pick);
   }
-
-  const portfolioValue = useMemo(() => portfolio.reduce((sum, item) => {
-    const live = scan.picks.find((pick) => pick.ticker === item.ticker)?.price || item.currentPrice;
-    return sum + item.shares * live;
-  }, 0), [portfolio, scan]);
-  const invested = portfolio.reduce((sum, item) => sum + item.shares * item.entryPrice, 0);
 
   return (
     <main>
@@ -131,7 +126,7 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
         <nav aria-label="Primary navigation">
           <button className={activeTab === "scanner" ? "active" : ""} onClick={() => setActiveTab("scanner")}>Scanner</button>
           <button className={activeTab === "search" ? "active" : ""} onClick={() => setActiveTab("search")}>Search</button>
-          <button className={activeTab === "portfolio" ? "active" : ""} onClick={() => setActiveTab("portfolio")}>Portfolio <span className="nav-count">{portfolio.length}</span></button>
+          <button className={activeTab === "portfolio" ? "active" : ""} onClick={() => setActiveTab("portfolio")}>Portfolio <span className="nav-count">{account?.holdings.length || 0}</span></button>
           <button className={activeTab === "strategies" ? "active" : ""} onClick={() => setActiveTab("strategies")}>Strategies</button>
         </nav>
         <div className="market-chip"><span className={scan.market.isOpen ? "pulse" : "dot"}/><span><strong>{scan.market.label}</strong><small>{scan.market.nextEvent}</small></span></div>
@@ -174,24 +169,20 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
               <p className="thesis">{selected.thesis}</p>
               <div className="factor-list">{selected.signals.slice(0, 6).map((factor) => <div className="factor" key={factor.key} title={factor.detail}><span>{factor.label}<small>{factor.source}</small></span><span className="factor-bar"><i style={{width: `${factor.score}%`}}/></span><b>{factor.score}</b></div>)}</div>
               <div className="risk-box"><ShieldIcon size={17}/><div><b>What breaks the thesis</b><p>{selected.risk}</p></div></div>
-              <div className="detail-footer"><span>Research horizon <b>{selected.horizon}</b></span><button onClick={() => addHolding(selected)}><PlusIcon size={16}/> Add to paper portfolio</button></div>
+              <div className="detail-footer"><span>Research horizon <b>{selected.horizon}</b></span><button onClick={() => openTradeTicket(selected)}><PlusIcon size={16}/> Open trade ticket</button></div>
             </aside>
           </div>
         </section>
 
         <section className="builder shell">
-          <div><span className="kicker">PORTFOLIO LAB</span><h2>Turn research into a disciplined paper portfolio.</h2><p>Only current AI suggestions are eligible. Weights are score-adjusted and diversified—never sent to a broker.</p></div>
-          <div className="builder-controls"><label>Starting capital<span><input type="number" min="1000" step="1000" value={capital} onChange={(event) => setCapital(Math.max(1000, Number(event.target.value)))}/><b>USD</b></span></label><label>Number of positions<span><input type="range" min="4" max="12" value={size} onChange={(event) => setSize(Number(event.target.value))}/><b>{size}</b></span></label><button className="primary wide" onClick={buildPortfolio}>Build AI paper portfolio <ArrowIcon size={17}/></button></div>
+          <div><span className="kicker">PORTFOLIO LAB</span><h2>Turn research into a disciplined paper portfolio.</h2><p>Create a simulated brokerage account with real cash accounting. The AI starter portfolio invests 85% and keeps 15% available for future orders.</p></div>
+          <div className="builder-controls"><label>Starting cash<span><input type="number" min="1000" step="1000" value={capital} onChange={(event) => setCapital(Math.max(1000, Number(event.target.value)))}/><b>USD</b></span></label><label>Starter positions<span><input type="range" min="4" max="12" value={size} onChange={(event) => setSize(Number(event.target.value))}/><b>{size}</b></span></label><button className="primary wide" onClick={buildPortfolio}>{account ? "Open paper brokerage" : "Create AI starter portfolio"} <ArrowIcon size={17}/></button></div>
         </section>
       </>}
 
-      {activeTab === "search" && <SearchWorkspace onAdd={addSearchSuggestion} portfolioTickers={portfolio.map((holding) => holding.ticker)}/>}
+      {activeTab === "search" && <SearchWorkspace onAdd={addSearchSuggestion} portfolioTickers={account?.holdings.map((holding) => holding.ticker) || []}/>}
 
-      {activeTab === "portfolio" && <section className="shell page-section">
-        <div className="page-hero"><span className="kicker">PAPER PORTFOLIO</span><h1>Your AI research basket.</h1><p>A local, simulation-only portfolio made exclusively from SignalForge suggestions.</p></div>
-        <div className="portfolio-summary"><div><small>MARKET VALUE</small><strong>{formatMoney(portfolioValue)}</strong></div><div><small>COST BASIS</small><strong>{formatMoney(invested)}</strong></div><div><small>UNREALIZED P&amp;L</small><strong className={portfolioValue - invested >= 0 ? "positive" : "negative"}>{portfolioValue - invested >= 0 ? "+" : ""}{formatMoney(portfolioValue - invested)}</strong></div><div><small>POSITIONS</small><strong>{portfolio.length}</strong></div></div>
-        {portfolio.length ? <div className="portfolio-table"><div className="portfolio-row header"><span>Company</span><span>Shares</span><span>Entry</span><span>Current</span><span>Weight</span><span></span></div>{portfolio.map((holding) => { const current = scan.picks.find((pick) => pick.ticker === holding.ticker)?.price || holding.currentPrice; return <div className="portfolio-row" key={holding.ticker}><span><b>{holding.ticker}</b><small>{holding.company}</small></span><span>{holding.shares}</span><span>{formatMoney(holding.entryPrice)}</span><span>{formatMoney(current)}</span><span>{holding.weight}%</span><button aria-label={`Remove ${holding.ticker}`} onClick={() => persist(portfolio.filter((item) => item.ticker !== holding.ticker))}><CloseIcon size={16}/></button></div>})}</div> : <div className="empty-state"><RadarIcon size={40}/><h3>No paper positions yet</h3><p>Build a diversified basket from the latest scan or add a suggestion individually.</p><button className="primary" onClick={() => setActiveTab("scanner")}>Open scanner</button></div>}
-      </section>}
+      {activeTab === "portfolio" && <PaperPortfolio account={account} eligiblePicks={scan.picks} requestedTicker={tradeTicker} defaultCapital={capital} onCreateCashAccount={(amount) => { persist(createCashAccount(amount)); announce(`Paper account opened with ${formatMoney(amount)} cash`); }} onChange={persist} onOpenScanner={() => setActiveTab("scanner")} onToast={announce}/>}
 
       {activeTab === "strategies" && <section className="shell page-section">
         <div className="page-hero"><span className="kicker">STRATEGY LIBRARY</span><h1>Ten lenses. One auditable score.</h1><p>No single strategy gets to dominate. The engine looks for independent agreement and displays every component.</p></div>
