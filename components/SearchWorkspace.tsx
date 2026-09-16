@@ -8,7 +8,7 @@ const factorDescriptions: Record<SearchFactorKey, string> = {
   quality: "Durable profitability, balance-sheet resilience and competitive advantage.",
   earnings: "The direction and breadth of forward estimate changes.",
   momentum: "Medium-term trend reinforced by the current market session.",
-  billionaire: "Concentrated institutional ownership inferred from delayed 13F filings.",
+  billionaire: "Institutional conviction from delayed 13F filings, with separate politician purchase examples.",
   quietCompounder: "Fundamental acceleration before the narrative becomes crowded.",
   value: "Cash-flow and earnings value relative to comparable companies."
 };
@@ -19,6 +19,16 @@ function money(value: number) {
 
 function compactMoney(value: number) {
   return new Intl.NumberFormat("en-US", { notation: "compact", style: "currency", currency: "USD", maximumFractionDigits: 1 }).format(value);
+}
+
+function shortDate(value: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T00:00:00Z`));
+}
+
+function filingPortal(chamber: "House" | "Senate") {
+  return chamber === "House"
+    ? "https://disclosures-clerk.house.gov/FinancialDisclosure"
+    : "https://efdsearch.senate.gov/search/home/";
 }
 
 function ScoreBar({ score }: { score: number }) {
@@ -138,6 +148,16 @@ export default function SearchWorkspace({ onTrade, portfolioTickers }: { onTrade
             <div className="research-price"><div><small>PRICE</small><strong>{money(selected.price)}</strong></div><div><small>MARKET CAP</small><strong>{compactMoney(selected.marketCap)}</strong></div></div>
             <p className="thesis">{selected.thesis}</p>
             <div className="research-factors">{SEARCH_FACTORS.map((key) => <div key={key} className={key === factor ? "active" : ""}><span><b>{SEARCH_FACTOR_LABELS[key]}</b><small>{selected.factorStatus[key]} · {selected.provenance[key]}</small></span><span className="factor-bar"><i style={{width: `${selected.factorScores[key]}%`}}/></span><strong>{selected.factorScores[key]}</strong></div>)}</div>
+            {factor === "billionaire" && <section className="politician-evidence" aria-label={`Politician purchase examples for ${selected.ticker}`}>
+              <div className="politician-evidence-head"><div><span className="kicker">STOCK ACT DISCLOSURES</span><h4>Politician purchase examples</h4></div><span>{data?.politicianDisclosures.asOf ? `Through ${shortDate(data.politicianDisclosures.asOf)}` : "Snapshot"}</span></div>
+              <p className="politician-context">These are separate from institutional 13F filings. Returns estimate the stock-price move from the reported transaction-date reference price to today’s displayed price.</p>
+              {selected.politicianPurchases.length ? <div className="politician-purchases">{selected.politicianPurchases.map((purchase) => <article key={`${purchase.politician}-${purchase.tradeDate}-${purchase.purchasePrice}`}>
+                <div className="politician-line"><div><b>{purchase.politician}</b><small>{purchase.party} · {purchase.chamber}, {purchase.state}</small></div><strong className={purchase.estimatedReturnPct >= 0 ? "positive" : "negative"}>{purchase.estimatedReturnPct >= 0 ? "+" : ""}{purchase.estimatedReturnPct}%</strong></div>
+                <div className="purchase-details"><span>Reported {shortDate(purchase.tradeDate)}</span><span>{purchase.amountRange}</span><span>${purchase.purchasePrice.toFixed(2)} → {money(selected.price)}</span></div>
+                <div className="purchase-source"><span>{purchase.disclosedAfterDays === null ? "Disclosure delay unavailable" : `Disclosed ${purchase.disclosedAfterDays} day${purchase.disclosedAfterDays === 1 ? "" : "s"} later`} · current price {purchase.returnPriceMode}</span><a href={filingPortal(purchase.chamber)} target="_blank" rel="noreferrer">Official {purchase.chamber} portal</a></div>
+              </article>)}</div> : <div className="politician-empty"><b>No purchase example in this snapshot</b><span>This does not mean the politician community has never owned or traded the stock; only validated purchase rows with a reference price are shown.</span></div>}
+              <div className="politician-footnote"><span>Price return only; excludes dividends, position size, taxes, options terms, and any later sale.</span>{data?.politicianDisclosures.sourceUrl && <a href={data.politicianDisclosures.sourceUrl} target="_blank" rel="noreferrer">Compiled dataset</a>}</div>
+            </section>}
             <div className="risk-box"><ShieldIcon size={17}/><div><b>Research risk</b><p>{selected.risk}</p></div></div>
             <button className="primary detail-add" onClick={() => onTrade({ ticker: selected.ticker, company: selected.company, price: selected.price, score: selected.compositeScore })}><PlusIcon size={16}/>{portfolioSet.has(selected.ticker) ? "Trade existing position" : "Open paper trade ticket"}</button>
           </> : <div className="no-results"><SearchIcon size={28}/><b>Select a stock</b><span>Open a result to inspect all six factors.</span></div>}

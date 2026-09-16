@@ -1,4 +1,5 @@
 import { evaluateUniverse, type ScoredStock, type UniverseEvaluation } from "./scanner";
+import { POLITICIAN_DISCLOSURE_META, politicianPurchaseExamples } from "./politician-trades";
 import { SEARCH_FACTORS, type ComparisonResponse, type PortfolioQuotesResponse, type ScreenerResponse, type ScreenerRow, type SearchFactorKey } from "./types";
 import { UNIVERSE, UNIVERSE_AS_OF } from "./universe";
 
@@ -52,6 +53,7 @@ function toRow(item: ScoredStock, factor: SearchFactorKey, categoryRank: number,
     provenance: factorRecord((key) => signalFor(item, key).source),
     factorStatus: factorStatuses(item, evaluation),
     portfolioEligible: true,
+    politicianPurchases: politicianPurchaseExamples(item.stock.ticker, item.quote.price, item.quote.source === "alpaca" ? "live" : "modeled"),
     thesis: item.thesis,
     risk: item.stock.risk
   };
@@ -92,6 +94,7 @@ export async function queryScreener(options: ScreenerQuery): Promise<ScreenerRes
     total: filtered.length,
     totalPages: Math.ceil(filtered.length / limit),
     sectors: availableSectors(),
+    politicianDisclosures: POLITICIAN_DISCLOSURE_META,
     rows: filtered.slice(start, start + limit)
   };
 }
@@ -115,6 +118,7 @@ export async function compareStocks(symbols: string[]): Promise<ComparisonRespon
     generatedAt: evaluation.generatedAt,
     universeAsOf: UNIVERSE_AS_OF,
     dataMode: evaluation.dataMode,
+    politicianDisclosures: POLITICIAN_DISCLOSURE_META,
     items: rows,
     winners
   };

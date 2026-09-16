@@ -58,6 +58,21 @@ test("portfolio quotes cover arbitrary held symbols with freshness and provenanc
   assert.ok(!Number.isNaN(Date.parse(result.generatedAt)));
 });
 
+test("13F stock details include separate politician purchase examples and estimated returns", async () => {
+  const result = await queryScreener({ factor: "billionaire", query: "AAPL" });
+  const apple = result.rows.find((row) => row.ticker === "AAPL");
+  assert.ok(apple);
+  assert.ok(result.politicianDisclosures.coveredTickers >= 500);
+  assert.match(result.politicianDisclosures.asOf, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(apple.politicianPurchases.length > 0 && apple.politicianPurchases.length <= 3);
+  apple.politicianPurchases.forEach((purchase) => {
+    assert.ok(purchase.politician.length > 0);
+    assert.ok(purchase.purchasePrice > 0);
+    assert.equal(purchase.estimatedReturnPct, Number((((apple.price / purchase.purchasePrice) - 1) * 100).toFixed(1)));
+    assert.ok(purchase.returnPriceMode === "live" || purchase.returnPriceMode === "modeled");
+  });
+});
+
 test("stock routes reject malformed filters and comparisons", async () => {
   const invalidFactor = await getStocks(new NextRequest("http://localhost/api/stocks?factor=magic"));
   assert.equal(invalidFactor.status, 400);

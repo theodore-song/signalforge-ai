@@ -116,6 +116,26 @@ export type PortfolioQuotesResponse = {
   missing: string[];
 };
 
+export type PoliticianPurchaseExample = {
+  politician: string;
+  party: string;
+  chamber: "House" | "Senate";
+  state: string;
+  tradeDate: string;
+  amountRange: string;
+  purchasePrice: number;
+  disclosedAfterDays: number | null;
+  estimatedReturnPct: number;
+  returnPriceMode: "live" | "modeled";
+};
+
+export type PoliticianDisclosureMeta = {
+  asOf: string;
+  source: string;
+  sourceUrl: string;
+  coveredTickers: number;
+};
+
 export type UniverseSecurity = {
   ticker: string;
   company: string;
@@ -146,6 +166,7 @@ export type ScreenerRow = {
   provenance: Record<SearchFactorKey, FactorSignal["source"]>;
   factorStatus: Record<SearchFactorKey, "live" | "modeled">;
   portfolioEligible: boolean;
+  politicianPurchases: PoliticianPurchaseExample[];
   thesis: string;
   risk: string;
 };
@@ -164,6 +185,7 @@ export type ScreenerResponse = {
   total: number;
   totalPages: number;
   sectors: string[];
+  politicianDisclosures: PoliticianDisclosureMeta;
   rows: ScreenerRow[];
 };
 
@@ -175,6 +197,7 @@ export type ComparisonResponse = {
   generatedAt: string;
   universeAsOf: string;
   dataMode: "live" | "modeled";
+  politicianDisclosures: PoliticianDisclosureMeta;
   items: ComparisonItem[];
   winners: Record<SearchFactorKey, string[]>;
 };

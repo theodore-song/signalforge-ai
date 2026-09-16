@@ -331,6 +331,28 @@ button { color: inherit; }
 .research-factors b { font-size: 9px; }
 .research-factors small { color: #98a09d; font-size: 7px; text-transform: uppercase; }
 .research-factors strong { font-family: Georgia, serif; font-size: 12px; text-align: right; }
+.politician-evidence { margin-top: 18px; padding-top: 17px; border-top: 1px solid var(--line); }
+.politician-evidence-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
+.politician-evidence-head h4 { margin: 5px 0 0; font-family: Georgia, serif; font-size: 16px; font-weight: 400; }
+.politician-evidence-head > span { color: #7b8581; font-size: 8px; white-space: nowrap; }
+.politician-context { color: #78827e; font-size: 8px; line-height: 1.5; margin: 10px 0 12px; }
+.politician-purchases { display: grid; gap: 7px; }
+.politician-purchases article { background: #f3f3ed; border: 1px solid #e0e2da; border-radius: 7px; padding: 10px; }
+.politician-line,.purchase-source,.politician-footnote { display: flex; justify-content: space-between; gap: 10px; }
+.politician-line > div { display: grid; gap: 2px; }
+.politician-line b { font-size: 10px; }
+.politician-line small { color: #7d8783; font-size: 7px; }
+.politician-line > strong { font-family: Georgia, serif; font-size: 17px; font-weight: 400; }
+.purchase-details { display: flex; flex-wrap: wrap; gap: 5px 9px; margin: 8px 0 6px; color: #56625e; font-size: 8px; }
+.purchase-details span + span { position: relative; }
+.purchase-details span + span:before { content: "·"; position: absolute; left: -6px; color: #a4aba8; }
+.purchase-source { align-items: center; color: #929a97; font-size: 7px; }
+.purchase-source a,.politician-footnote a { color: var(--green); text-decoration: none; white-space: nowrap; }
+.purchase-source a:hover,.politician-footnote a:hover { text-decoration: underline; }
+.politician-empty { display: grid; gap: 4px; background: #f3f3ed; border: 1px dashed #d5d9d0; border-radius: 7px; padding: 12px; }
+.politician-empty b { font-size: 9px; }
+.politician-empty span { color: #7f8985; font-size: 8px; line-height: 1.5; }
+.politician-footnote { align-items: flex-start; color: #8d9592; font-size: 7px; line-height: 1.45; margin-top: 9px; }
 .detail-add { width: 100%; }
 .eligibility-note { padding: 12px; background: #f0eee7; border-radius: 7px; display: grid; gap: 3px; }
 .eligibility-note b { font-size: 10px; }

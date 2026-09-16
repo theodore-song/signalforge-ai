@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import snapshot from "../lib/universe.generated.json";
+import politicianSnapshot from "../lib/politician-purchases.generated.json";
 import { UNIVERSE, UNIVERSE_AS_OF } from "../lib/universe";
 
 test("security master contains exactly 2,000 unique market-cap-ranked stocks", () => {
@@ -24,5 +25,23 @@ test("security master excludes unsupported security types", () => {
     assert.doesNotMatch(stock.company, excluded);
     assert.doesNotMatch(stock.industry, /blank checks?/i);
     assert.doesNotMatch(stock.ticker, /[+^/]/);
+  });
+});
+
+test("politician purchase snapshot is validated, deduplicated, and limited to the universe", () => {
+  const universeTickers = new Set(UNIVERSE.map((stock) => stock.ticker));
+  assert.match(politicianSnapshot.asOf, /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok(politicianSnapshot.coveredTickers >= 500);
+  assert.equal(Object.keys(politicianSnapshot.purchases).length, politicianSnapshot.coveredTickers);
+  Object.entries(politicianSnapshot.purchases).forEach(([ticker, purchases]) => {
+    assert.ok(universeTickers.has(ticker));
+    assert.ok(purchases.length > 0 && purchases.length <= 3);
+    const unique = new Set(purchases.map((purchase) => [purchase.politician, purchase.tradeDate, purchase.amountRange, purchase.purchasePrice].join("|")));
+    assert.equal(unique.size, purchases.length);
+    purchases.forEach((purchase) => {
+      assert.ok(purchase.purchasePrice > 0);
+      assert.match(purchase.tradeDate, /^\d{4}-\d{2}-\d{2}$/);
+      assert.ok(purchase.chamber === "House" || purchase.chamber === "Senate");
+    });
   });
 });

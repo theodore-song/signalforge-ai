@@ -19,15 +19,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run refresh:universe
+      - run: npm run refresh:politicians
       - run: npm test
-      - name: Commit validated membership changes
+      - name: Commit validated research data changes
         run: |
-          if git diff --quiet -- lib/universe.generated.json; then
-            echo "Universe membership is unchanged."
+          if git diff --quiet -- lib/universe.generated.json lib/politician-purchases.generated.json; then
+            echo "Research datasets are unchanged."
             exit 0
           fi
           git config user.name "signalforge-universe-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add lib/universe.generated.json
-          git commit -m "Refresh 2,000-stock universe"
+          git add lib/universe.generated.json lib/politician-purchases.generated.json
+          git commit -m "Refresh stock universe and disclosure examples"
           git push

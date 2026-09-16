@@ -8,6 +8,7 @@ SignalForge is a public, Vercel-ready stock research dashboard. It combines expe
 - Deterministic demonstration market data, clearly labelled as modeled
 - Ten-factor explainable scoring and risk cases
 - Search tab with six factor leaderboards, ticker/company search, sector filters, pagination, and five-stock comparison
+- 13F stock details with separate STOCK Act politician purchase examples and estimated price returns
 - Fresh scan endpoint with optional OpenAI investment-committee brief
 - Persistent paper brokerage account with cash, fractional buy/sell orders, cost basis, P&L, and trade history
 - Automatic browser refresh every 60 seconds during the regular US session
@@ -29,6 +30,8 @@ Open `http://localhost:3000`.
 Set `ALPACA_API_KEY` and `ALPACA_API_SECRET` for live IEX snapshots. Without them, the site intentionally runs in demonstration mode.
 
 The checked-in security master is generated from Nasdaq's public stock screener and contains the 2,000 largest eligible US-listed common stocks and ADRs by market capitalization. Funds, preferred shares, debt securities, warrants, units, rights, and blank-check companies are excluded. Run `npm run refresh:universe` to refresh it; a monthly GitHub workflow validates and commits membership changes automatically.
+
+The 13F leaderboard remains an institutional-ownership factor. Its stock detail panel separately shows up to three recent politician purchase examples compiled from public STOCK Act disclosures. Run `npm run refresh:politicians` to rebuild the checked-in snapshot; the monthly research-data workflow refreshes and validates it automatically. Each displayed return is the simple stock-price change from the transaction-date reference price to the current displayed quote. It is not a verified portfolio profit and excludes dividends, position sizing, taxes, options terms, and later sales. House and Senate filing portals are linked beside every example.
 
 Optional disclosure and sentiment endpoints must return a JSON array:
 
@@ -69,6 +72,7 @@ Every open position is repriced through `GET /api/quotes?symbols=AAPL,MSFT` on l
 - This is educational software, not investment advice or a promise of performance.
 - “Best” means highest score under the documented model, not guaranteed future return.
 - Public filings are delayed; congressional disclosures and 13F filings can be weeks old.
+- Politician returns are price-return estimates, not proof that a filer still owns the security or realized the displayed gain or loss.
 - Modeled/demo signals are synthetic and must not be used for real-money decisions.
 - US market session detection does not independently model exchange holidays; the connected market-data provider should be the production source of truth.
 - A production deployment should add a licensed fundamentals provider, data-quality monitoring, a complete security master, point-in-time backtests, and authenticated administrative scan controls.
