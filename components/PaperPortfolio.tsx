@@ -17,6 +17,11 @@ function signedMoney(value: number) {
   return `${value >= 0 ? "+" : ""}${money(value)}`;
 }
 
+function quoteFreshness(value?: string) {
+  if (!value) return "Prices syncing…";
+  return `Prices updated ${new Date(value).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
+}
+
 type Props = {
   account: PaperPortfolioAccount | null;
   tradeableQuotes: TradeQuote[];
@@ -117,7 +122,7 @@ export default function PaperPortfolio({ account, tradeableQuotes, requestedTick
 
     <div className="brokerage-layout">
       <div className="positions-card">
-        <div className="brokerage-card-heading"><div><span className="kicker">OPEN POSITIONS</span><h2>Holdings</h2></div><span>{account.holdings.length} positions</span></div>
+        <div className="brokerage-card-heading"><div><span className="kicker">OPEN POSITIONS</span><h2>Holdings</h2></div><span>{account.holdings.length} positions · {quoteFreshness(account.quotesUpdatedAt)}</span></div>
         {account.holdings.length ? <div className="positions-table">
           <div className="position-row header"><span>Company</span><span>Shares</span><span>Avg. cost</span><span>Last</span><span>Market value</span><span>Return</span><span>Allocation</span><span></span></div>
           {account.holdings.map((holding) => {

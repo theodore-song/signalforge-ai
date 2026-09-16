@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { accountMetrics, buyStock, createAiAccount, createCashAccount, migratePaperAccount, sellStock } from "../lib/portfolio";
+import { accountMetrics, applyHoldingQuotes, buyStock, createAiAccount, createCashAccount, migratePaperAccount, sellStock } from "../lib/portfolio";
 import type { StockPick } from "../lib/types";
 
 function pick(ticker: string, price: number, score: number): StockPick {
@@ -78,6 +78,20 @@ test("account metrics include cash, market value, and realized plus unrealized P
   assert.equal(metrics.realizedPnl, 20);
   assert.equal(metrics.totalPnl, 180);
   assert.equal(metrics.totalValue, 10_180);
+});
+
+test("portfolio quote refresh updates every matching holding without creating trades", () => {
+  const first = buyStock(createCashAccount(10_000), pick("AAA", 100, 80), 10, "2026-09-11T12:00:00.000Z");
+  const second = buyStock(first, pick("BBB", 50, 75), 20, "2026-09-11T12:01:00.000Z");
+  const refreshed = applyHoldingQuotes(second, [
+    { ticker: "AAA", price: 112, changePct: 1.4, source: "live" },
+    { ticker: "BBB", price: 47, changePct: -0.8, source: "modeled" }
+  ], "2026-09-11T12:05:00.000Z");
+  assert.equal(refreshed.holdings.find((holding) => holding.ticker === "AAA")?.currentPrice, 112);
+  assert.equal(refreshed.holdings.find((holding) => holding.ticker === "BBB")?.currentPrice, 47);
+  assert.equal(refreshed.transactions.length, 2);
+  assert.equal(refreshed.quotesUpdatedAt, "2026-09-11T12:05:00.000Z");
+  assert.equal(accountMetrics(refreshed).securitiesValue, 2_060);
 });
 
 test("legacy position arrays migrate without losing holdings", () => {

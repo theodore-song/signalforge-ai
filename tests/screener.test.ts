@@ -3,7 +3,8 @@ import test from "node:test";
 import { NextRequest } from "next/server";
 import { GET as getStocks } from "../app/api/stocks/route";
 import { GET as compareRoute } from "../app/api/stocks/compare/route";
-import { compareStocks, queryScreener } from "../lib/screener";
+import { GET as quotesRoute } from "../app/api/quotes/route";
+import { compareStocks, portfolioQuotes, queryScreener } from "../lib/screener";
 import { runScan } from "../lib/scanner";
 
 test("leaderboard sorts globally by factor, composite, then market-cap rank", async () => {
@@ -48,6 +49,15 @@ test("the full research universe is paper-trade eligible while Scanner stays at 
   assert.equal(scan.picks.length, 12);
 });
 
+test("portfolio quotes cover arbitrary held symbols with freshness and provenance", async () => {
+  const result = await portfolioQuotes(["AAPL", "BKE", "NOTREAL"]);
+  assert.deepEqual(result.quotes.map((quote) => quote.ticker), ["AAPL", "BKE"]);
+  assert.deepEqual(result.missing, ["NOTREAL"]);
+  assert.ok(result.quotes.every((quote) => quote.price > 0));
+  assert.ok(result.quotes.every((quote) => quote.source === "live" || quote.source === "modeled"));
+  assert.ok(!Number.isNaN(Date.parse(result.generatedAt)));
+});
+
 test("stock routes reject malformed filters and comparisons", async () => {
   const invalidFactor = await getStocks(new NextRequest("http://localhost/api/stocks?factor=magic"));
   assert.equal(invalidFactor.status, 400);
@@ -57,4 +67,8 @@ test("stock routes reject malformed filters and comparisons", async () => {
   assert.equal(tooMany.status, 400);
   const duplicate = await compareRoute(new NextRequest("http://localhost/api/stocks/compare?symbols=AAPL,AAPL"));
   assert.equal(duplicate.status, 400);
+  const emptyQuotes = await quotesRoute(new NextRequest("http://localhost/api/quotes"));
+  assert.equal(emptyQuotes.status, 400);
+  const duplicateQuotes = await quotesRoute(new NextRequest("http://localhost/api/quotes?symbols=AAPL,AAPL"));
+  assert.equal(duplicateQuotes.status, 400);
 });

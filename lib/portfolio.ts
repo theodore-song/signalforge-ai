@@ -1,4 +1,4 @@
-import type { PaperPortfolioAccount, PortfolioHolding, PortfolioTransaction, StockPick } from "./types";
+import type { PaperPortfolioAccount, PortfolioHolding, PortfolioQuote, PortfolioTransaction, StockPick } from "./types";
 
 export type TradeQuote = Pick<StockPick, "ticker" | "company" | "price" | "score">;
 
@@ -130,6 +130,18 @@ export function accountMetrics(account: PaperPortfolioAccount, prices: Record<st
     totalPnl: money(unrealizedPnl + account.realizedPnl),
     cashWeight: totalValue > 0 ? Number(((account.cash / totalValue) * 100).toFixed(1)) : 0
   };
+}
+
+export function applyHoldingQuotes(account: PaperPortfolioAccount, quotes: PortfolioQuote[], generatedAt: string) {
+  const prices = new Map(quotes.filter((quote) => Number.isFinite(quote.price) && quote.price > 0).map((quote) => [quote.ticker, quote.price]));
+  let changed = account.quotesUpdatedAt !== generatedAt;
+  const holdings = account.holdings.map((holding) => {
+    const price = prices.get(holding.ticker);
+    if (!price || price === holding.currentPrice) return holding;
+    changed = true;
+    return { ...holding, currentPrice: price };
+  });
+  return changed ? { ...account, holdings, quotesUpdatedAt: generatedAt } : account;
 }
 
 type LegacyHolding = { ticker?: unknown; company?: unknown; shares?: unknown; entryPrice?: unknown; currentPrice?: unknown; score?: unknown };

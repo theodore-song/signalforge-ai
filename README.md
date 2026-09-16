@@ -62,6 +62,8 @@ Searchable factors are `quality`, `earnings`, `momentum`, `billionaire`, `quietC
 
 Visitors can create a cash-only simulated account or generate an AI starter portfolio that retains a 15% cash reserve. Buys support fractional shares across the complete 2,000-stock universe: open any company from any Search category to prefill its trade ticket. Repeat buys update weighted average cost; sells update cash and realized P&L; complete trade history remains stored locally in the browser. Existing position-only portfolios are migrated automatically.
 
+Every open position is repriced through `GET /api/quotes?symbols=AAPL,MSFT` on load and once per minute while the site remains open. The endpoint covers up to 50 held tickers, shares the universe engine's five-minute market bucket, and reports whether each quote is live via Alpaca or explicitly modeled. Last successful quote freshness is shown above the holdings table and persisted with the account.
+
 ## Important limitations
 
 - This is educational software, not investment advice or a promise of performance.

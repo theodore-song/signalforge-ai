@@ -1,5 +1,5 @@
 import { evaluateUniverse, type ScoredStock, type UniverseEvaluation } from "./scanner";
-import { SEARCH_FACTORS, type ComparisonResponse, type ScreenerResponse, type ScreenerRow, type SearchFactorKey } from "./types";
+import { SEARCH_FACTORS, type ComparisonResponse, type PortfolioQuotesResponse, type ScreenerResponse, type ScreenerRow, type SearchFactorKey } from "./types";
 import { UNIVERSE, UNIVERSE_AS_OF } from "./universe";
 
 export type ScreenerQuery = {
@@ -117,5 +117,26 @@ export async function compareStocks(symbols: string[]): Promise<ComparisonRespon
     dataMode: evaluation.dataMode,
     items: rows,
     winners
+  };
+}
+
+export async function portfolioQuotes(symbols: string[]): Promise<PortfolioQuotesResponse> {
+  const evaluation = await evaluateUniverse();
+  const byTicker = new Map(evaluation.stocks.map((item) => [item.stock.ticker, item]));
+  const quotes = symbols.flatMap((ticker) => {
+    const item = byTicker.get(ticker);
+    if (!item) return [];
+    return [{
+      ticker,
+      price: Number(item.quote.price.toFixed(2)),
+      changePct: Number(item.quote.changePct.toFixed(2)),
+      source: item.quote.source === "alpaca" ? "live" as const : "modeled" as const
+    }];
+  });
+  return {
+    generatedAt: evaluation.generatedAt,
+    dataMode: quotes.some((quote) => quote.source === "live") ? "live" : "modeled",
+    quotes,
+    missing: symbols.filter((ticker) => !byTicker.has(ticker))
   };
 }

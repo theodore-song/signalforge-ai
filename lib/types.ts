@@ -99,6 +99,21 @@ export type PaperPortfolioAccount = {
   transactions: PortfolioTransaction[];
   createdAt: string;
   updatedAt: string;
+  quotesUpdatedAt?: string;
+};
+
+export type PortfolioQuote = {
+  ticker: string;
+  price: number;
+  changePct: number;
+  source: "live" | "modeled";
+};
+
+export type PortfolioQuotesResponse = {
+  generatedAt: string;
+  dataMode: "live" | "modeled";
+  quotes: PortfolioQuote[];
+  missing: string[];
 };
 
 export type UniverseSecurity = {
