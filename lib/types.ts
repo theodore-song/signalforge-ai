@@ -154,6 +154,7 @@ export type ScreenerRow = {
   sector: string;
   industry: string;
   country: string;
+  isAdr: boolean;
   marketCap: number;
   marketCapRank: number;
   price: number;

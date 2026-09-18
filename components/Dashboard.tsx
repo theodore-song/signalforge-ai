@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { PaperPortfolioAccount, PortfolioQuotesResponse, ScanResult, StockPick } from "@/lib/types";
+import type { PaperPortfolioAccount, PortfolioQuotesResponse, ScanResult, ScreenerResponse, ScreenerRow, StockPick } from "@/lib/types";
 import { applyHoldingQuotes, createAiAccount, createCashAccount, migratePaperAccount, type TradeQuote } from "@/lib/portfolio";
 import { ArrowIcon, PlusIcon, RadarIcon, RefreshIcon, ShieldIcon, SparkIcon } from "./Icons";
 import Sparkline from "./Sparkline";
 import SearchWorkspace from "./SearchWorkspace";
 import PaperPortfolio from "./PaperPortfolio";
+import StockResearchModal from "./StockResearchModal";
 
 const strategyCards = [
   ["Quality × Momentum", "Expert", "Profitable leaders with trend confirmation; avoids cheap stocks with deteriorating businesses."],
@@ -41,6 +42,7 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
   const [categoryQuotes, setCategoryQuotes] = useState<TradeQuote[]>([]);
   const [toast, setToast] = useState("");
   const [clock, setClock] = useState<number | null>(null);
+  const [research, setResearch] = useState<{ ticker: string; row: ScreenerRow | null; loading: boolean; error: string } | null>(null);
   const holdingSymbols = useMemo(() => account?.holdings.map((holding) => holding.ticker).sort().join(",") || "", [account?.holdings]);
 
   useEffect(() => {
@@ -130,6 +132,27 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
     setActiveTab("portfolio");
   }
 
+  function inspectSearchStock(row: ScreenerRow) {
+    setResearch({ ticker: row.ticker, row, loading: false, error: "" });
+  }
+
+  async function inspectScannerStock(pick: StockPick) {
+    setSelected(pick);
+    setResearch({ ticker: pick.ticker, row: null, loading: true, error: "" });
+    try {
+      const params = new URLSearchParams({ factor: "quality", q: pick.ticker, page: "1", limit: "50" });
+      const response = await fetch(`/api/stocks?${params}`);
+      if (!response.ok) throw new Error("Unable to load this company record.");
+      const result = await response.json() as ScreenerResponse;
+      const row = result.rows.find((candidate) => candidate.ticker === pick.ticker);
+      if (!row) throw new Error(`${pick.ticker} is not available in the current research universe.`);
+      setResearch((current) => current?.ticker === pick.ticker ? { ticker: pick.ticker, row, loading: false, error: "" } : current);
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : "Unable to load this company record.";
+      setResearch((current) => current?.ticker === pick.ticker ? { ticker: pick.ticker, row: null, loading: false, error: message } : current);
+    }
+  }
+
   function buildPortfolio() {
     if (!account) {
       persist(createAiAccount(scan.picks, capital, size));
@@ -183,7 +206,7 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
           <div className="scanner-layout">
             <div className="table-card">
               <div className="table-head"><span>Rank / company</span><span>Signal score</span><span>Price</span><span>Trend</span><span></span></div>
-              {scan.picks.map((pick) => <button key={pick.ticker} className={`stock-row ${selected.ticker === pick.ticker ? "selected" : ""}`} onClick={() => setSelected(pick)}>
+              {scan.picks.map((pick) => <button key={pick.ticker} className={`stock-row ${selected.ticker === pick.ticker ? "selected" : ""}`} onClick={() => void inspectScannerStock(pick)} aria-label={`Open research for ${pick.ticker}`}>
                 <span className="company-cell"><em>{String(pick.rank).padStart(2, "0")}</em><span className="ticker-mark">{pick.ticker.slice(0, 2)}</span><span><b>{pick.ticker}</b><small>{pick.company}</small></span></span>
                 <span className="score-cell"><b>{pick.score}</b><span className="score-track"><i style={{width: `${pick.score}%`}}/></span></span>
                 <span className="price-cell"><b>{formatMoney(pick.price)}</b><small className={pick.changePct >= 0 ? "positive" : "negative"}>{pick.changePct >= 0 ? "+" : ""}{pick.changePct}%</small></span>
@@ -209,7 +232,7 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
         </section>
       </>}
 
-      {activeTab === "search" && <SearchWorkspace onTrade={openTradeTicket} portfolioTickers={account?.holdings.map((holding) => holding.ticker) || []}/>}
+      {activeTab === "search" && <SearchWorkspace onTrade={openTradeTicket} onInspect={inspectSearchStock} portfolioTickers={account?.holdings.map((holding) => holding.ticker) || []}/>}
 
       {activeTab === "portfolio" && <PaperPortfolio account={account} tradeableQuotes={tradeableQuotes} requestedTicker={tradeTicker} defaultCapital={capital} onCreateCashAccount={(amount) => { persist(createCashAccount(amount)); announce(`Paper account opened with ${formatMoney(amount)} cash`); }} onChange={persist} onOpenSearch={() => setActiveTab("search")} onToast={announce}/>}
 
@@ -220,6 +243,18 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
       </section>}
 
       <footer><div className="shell"><span className="brand footer-brand"><span className="brand-mark"><RadarIcon size={17}/></span>SignalForge AI</span><p>Educational research and paper simulation only. Not investment advice. Market, filing and alternative data may be delayed, incomplete or modeled.</p><span>Built for transparent decisions.</span></div></footer>
+      {research && <StockResearchModal
+        ticker={research.ticker}
+        row={research.row}
+        loading={research.loading}
+        error={research.error}
+        held={Boolean(account?.holdings.some((holding) => holding.ticker === research.ticker))}
+        onClose={() => setResearch(null)}
+        onTrade={(row) => {
+          setResearch(null);
+          openTradeTicket({ ticker: row.ticker, company: row.company, price: row.price, score: row.compositeScore });
+        }}
+      />}
       {toast && <div className="toast">{toast}</div>}
     </main>
   );

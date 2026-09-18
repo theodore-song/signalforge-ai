@@ -35,7 +35,7 @@ function ScoreBar({ score }: { score: number }) {
   return <span className="search-score"><b>{score}</b><span><i style={{ width: `${score}%` }}/></span></span>;
 }
 
-export default function SearchWorkspace({ onTrade, portfolioTickers }: { onTrade: (quote: { ticker: string; company: string; price: number; score: number }) => void; portfolioTickers: string[] }) {
+export default function SearchWorkspace({ onTrade, onInspect, portfolioTickers }: { onTrade: (quote: { ticker: string; company: string; price: number; score: number }) => void; onInspect: (row: ScreenerRow) => void; portfolioTickers: string[] }) {
   const [factor, setFactor] = useState<SearchFactorKey>("quality");
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -88,6 +88,11 @@ export default function SearchWorkspace({ onTrade, portfolioTickers }: { onTrade
       : current.length < 5 ? [...current, ticker] : current);
   }
 
+  function inspectStock(row: ScreenerRow) {
+    setSelected(row);
+    onInspect(row);
+  }
+
   async function openComparison() {
     if (compareSymbols.length < 2) return;
     setLoading(true);
@@ -130,9 +135,9 @@ export default function SearchWorkspace({ onTrade, portfolioTickers }: { onTrade
         <div className={`screener-card ${loading ? "loading" : ""}`}>
           <div className="screener-head"><span>Compare</span><span>Category rank / company</span><span>{SEARCH_FACTOR_LABELS[factor]}</span><span>Composite</span><span>Price</span><span>Source</span></div>
           {!loading && data?.rows.length === 0 && <div className="no-results"><SearchIcon size={28}/><b>No matching stocks</b><span>Try a different company, ticker, or sector.</span></div>}
-          {data?.rows.map((row) => <div className={`screener-row ${selected?.ticker === row.ticker ? "selected" : ""}`} key={row.ticker}>
-            <button type="button" className="compare-check" aria-label={`Compare ${row.ticker}`} aria-pressed={compareSymbols.includes(row.ticker)} disabled={!compareSymbols.includes(row.ticker) && selectedCount >= 5} onClick={() => toggleComparison(row.ticker)}><span/></button>
-            <button className="screener-company" onClick={() => setSelected(row)}><em>#{row.categoryRank}</em><span className="ticker-mark">{row.ticker.slice(0, 2)}</span><span><b>{row.ticker}</b><small>{row.company} · {row.sector}</small></span></button>
+          {data?.rows.map((row) => <div className={`screener-row ${selected?.ticker === row.ticker ? "selected" : ""}`} key={row.ticker} role="button" tabIndex={0} aria-label={`Open research for ${row.ticker}`} onClick={() => inspectStock(row)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); inspectStock(row); } }}>
+            <button type="button" className="compare-check" aria-label={`Compare ${row.ticker}`} aria-pressed={compareSymbols.includes(row.ticker)} disabled={!compareSymbols.includes(row.ticker) && selectedCount >= 5} onClick={(event) => { event.stopPropagation(); toggleComparison(row.ticker); }}><span/></button>
+            <div className="screener-company"><em>#{row.categoryRank}</em><span className="ticker-mark">{row.ticker.slice(0, 2)}</span><span><b>{row.ticker}</b><small>{row.company} · {row.sector}</small></span></div>
             <ScoreBar score={row.selectedScore}/>
             <span className="composite-score">{row.compositeScore}</span>
             <span className="search-price"><b>{money(row.price)}</b><small className={row.changePct >= 0 ? "positive" : "negative"}>{row.changePct >= 0 ? "+" : ""}{row.changePct}%</small></span>
