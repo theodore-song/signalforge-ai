@@ -149,14 +149,16 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
   return (
     <main>
       <header className="topbar">
-        <button className="brand" onClick={() => setActiveTab("scanner")}><span className="brand-mark"><RadarIcon size={21}/></span><span>SignalForge <b>AI</b></span></button>
-        <nav aria-label="Primary navigation">
-          <button className={activeTab === "scanner" ? "active" : ""} onClick={() => setActiveTab("scanner")}>Scanner</button>
-          <button className={activeTab === "search" ? "active" : ""} onClick={() => setActiveTab("search")}>Search</button>
-          <button className={activeTab === "portfolio" ? "active" : ""} onClick={() => setActiveTab("portfolio")}>Portfolio <span className="nav-count">{account?.holdings.length || 0}</span></button>
-          <button className={activeTab === "strategies" ? "active" : ""} onClick={() => setActiveTab("strategies")}>Strategies</button>
-        </nav>
-        <div className="market-chip"><span className={scan.market.isOpen ? "pulse" : "dot"}/><span><strong>{scan.market.label}</strong><small>{scan.market.nextEvent}</small></span></div>
+        <div className="topbar-inner">
+          <button type="button" className="brand" onClick={() => setActiveTab("scanner")}><span className="brand-mark"><RadarIcon size={21}/></span><span className="brand-copy"><span>SignalForge <b>AI</b></span><small>Research intelligence</small></span></button>
+          <nav aria-label="Primary navigation">
+            <button type="button" aria-current={activeTab === "scanner" ? "page" : undefined} className={activeTab === "scanner" ? "active" : ""} onClick={() => setActiveTab("scanner")}>Scanner</button>
+            <button type="button" aria-current={activeTab === "search" ? "page" : undefined} className={activeTab === "search" ? "active" : ""} onClick={() => setActiveTab("search")}>Search</button>
+            <button type="button" aria-current={activeTab === "portfolio" ? "page" : undefined} className={activeTab === "portfolio" ? "active" : ""} onClick={() => setActiveTab("portfolio")}>Portfolio <span className="nav-count">{account?.holdings.length || 0}</span></button>
+            <button type="button" aria-current={activeTab === "strategies" ? "page" : undefined} className={activeTab === "strategies" ? "active" : ""} onClick={() => setActiveTab("strategies")}>Strategies</button>
+          </nav>
+          <div className="market-chip"><span className={scan.market.isOpen ? "pulse" : "dot"}/><span><strong>{scan.market.label}</strong><small>{scan.market.nextEvent}</small></span></div>
+        </div>
       </header>
 
       {activeTab === "scanner" && <>
