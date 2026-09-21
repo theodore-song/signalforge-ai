@@ -10,3 +10,4 @@ export function RefreshIcon({ size, className }: IconProps) { return <svg {...ba
 export function CloseIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><path d="m6 6 12 12M18 6 6 18"/></svg>; }
 export function SearchIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>; }
 export function CompareIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><path d="M8 5h12M8 12h12M8 19h12"/><circle cx="4" cy="5" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="19" r="1" fill="currentColor"/></svg>; }
+export function UserIcon({ size, className }: IconProps) { return <svg {...base(size)} className={className}><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>; }

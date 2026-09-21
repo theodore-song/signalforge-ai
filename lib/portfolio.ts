@@ -30,7 +30,7 @@ export function createCashAccount(startingBalance: number, now = new Date().toIS
   return { version: 2, startingBalance: normalized, cash: normalized, realizedPnl: 0, holdings: [], transactions: [], createdAt: now, updatedAt: now };
 }
 
-export function buyStock(account: PaperPortfolioAccount, quote: TradeQuote, requestedShares: number, now = new Date().toISOString()) {
+export function buyStock(account: PaperPortfolioAccount, quote: TradeQuote, requestedShares: number, now = new Date().toISOString(), source: PortfolioTransaction["source"] = "user") {
   validAmount(requestedShares, "Shares");
   validAmount(quote.price, "Price");
   const shares = quantity(requestedShares);
@@ -56,6 +56,7 @@ export function buyStock(account: PaperPortfolioAccount, quote: TradeQuote, requ
   const transaction: PortfolioTransaction = {
     id: transactionId("BUY", quote.ticker, now, account.transactions.length),
     side: "BUY",
+    source,
     ticker: quote.ticker,
     company: quote.company,
     shares,
@@ -85,6 +86,7 @@ export function sellStock(account: PaperPortfolioAccount, ticker: string, price:
   const transaction: PortfolioTransaction = {
     id: transactionId("SELL", ticker, now, account.transactions.length),
     side: "SELL",
+    source: "user",
     ticker,
     company: holding.company,
     shares,
@@ -112,8 +114,39 @@ export function createAiAccount(picks: StockPick[], startingBalance: number, pos
   return chosen.reduce((current, pick) => {
     const allocation = investable * (Math.max(pick.score - 60, 5) / scoreTotal);
     const shares = Math.floor((allocation / pick.price) * 1000) / 1000;
-    return shares > 0 ? buyStock(current, pick, shares, now) : current;
+    return shares > 0 ? buyStock(current, pick, shares, now, "ai") : current;
   }, account);
+}
+
+export function runConvictionAgent(
+  account: PaperPortfolioAccount,
+  picks: StockPick[],
+  targetPositions: number,
+  cashReservePct: number,
+  now = new Date().toISOString()
+) {
+  const chosen = picks.slice(0, Math.min(12, Math.max(1, Math.round(targetPositions))));
+  if (!chosen.length) return { account, orders: 0, invested: 0 };
+  const metrics = accountMetrics(account);
+  const reserve = metrics.totalValue * Math.min(50, Math.max(0, cashReservePct)) / 100;
+  const investable = Math.max(0, account.cash - reserve);
+  if (investable < 1) return { account, orders: 0, invested: 0 };
+
+  const scoreTotal = chosen.reduce((sum, pick) => sum + Math.max(pick.score - 60, 5), 0);
+  let next = account;
+  let orders = 0;
+  let invested = 0;
+  for (const pick of chosen) {
+    const allocation = investable * (Math.max(pick.score - 60, 5) / scoreTotal);
+    const available = Math.max(0, next.cash - reserve);
+    const budget = Math.min(allocation, available);
+    const shares = Math.floor((budget / pick.price) * 1000) / 1000;
+    if (shares <= 0) continue;
+    next = buyStock(next, pick, shares, now, "ai");
+    invested = money(invested + shares * pick.price);
+    orders += 1;
+  }
+  return { account: next, orders, invested };
 }
 
 export function accountMetrics(account: PaperPortfolioAccount, prices: Record<string, number> = {}): AccountMetrics {

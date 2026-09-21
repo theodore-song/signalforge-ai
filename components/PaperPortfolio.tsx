@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { accountMetrics, buyStock, sellStock, type TradeQuote } from "@/lib/portfolio";
-import type { PaperPortfolioAccount } from "@/lib/types";
-import { ArrowIcon, PlusIcon, RadarIcon, ShieldIcon } from "./Icons";
+import type { AuthUser, PaperPortfolioAccount, PortfolioAgentSettings, SavedPortfolio } from "@/lib/types";
+import { ArrowIcon, PlusIcon, RadarIcon, ShieldIcon, SparkIcon, UserIcon } from "./Icons";
 
 function money(value: number) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(value);
@@ -24,20 +24,34 @@ function quoteFreshness(value?: string) {
 
 type Props = {
   account: PaperPortfolioAccount | null;
+  accountLoading: boolean;
+  user: AuthUser | null;
+  portfolios: SavedPortfolio[];
+  activePortfolioId: string | null;
+  activeAgent: PortfolioAgentSettings | null;
   tradeableQuotes: TradeQuote[];
   requestedTicker: string | null;
   defaultCapital: number;
-  onCreateCashAccount: (capital: number) => void;
+  onCreateCashAccount: (name: string, capital: number) => void;
+  onCreatePortfolio: (name: string, capital: number) => void;
+  onSwitchPortfolio: (id: string) => void;
   onChange: (account: PaperPortfolioAccount) => void;
   onOpenSearch: () => void;
+  onOpenAccount: () => void;
+  onRunAgent: () => void;
+  onUpdateAgent: (changes: Partial<Pick<PortfolioAgentSettings, "enabled" | "targetPositions" | "cashReservePct">>) => void;
   onToast: (message: string) => void;
 };
 
-export default function PaperPortfolio({ account, tradeableQuotes, requestedTicker, defaultCapital, onCreateCashAccount, onChange, onOpenSearch, onToast }: Props) {
+export default function PaperPortfolio({ account, accountLoading, user, portfolios, activePortfolioId, activeAgent, tradeableQuotes, requestedTicker, defaultCapital, onCreateCashAccount, onCreatePortfolio, onSwitchPortfolio, onChange, onOpenSearch, onOpenAccount, onRunAgent, onUpdateAgent, onToast }: Props) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [symbol, setSymbol] = useState(requestedTicker || tradeableQuotes[0]?.ticker || "");
   const [quantity, setQuantity] = useState("");
   const [openingCash, setOpeningCash] = useState(defaultCapital);
+  const [portfolioName, setPortfolioName] = useState("My Portfolio");
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("New Portfolio");
+  const [newCash, setNewCash] = useState(defaultCapital);
 
   const priceMap = useMemo(() => Object.fromEntries(tradeableQuotes.map((quote) => [quote.ticker, quote.price])), [tradeableQuotes]);
   const metrics = useMemo(() => account ? accountMetrics(account, priceMap) : null, [account, priceMap]);
@@ -97,17 +111,25 @@ export default function PaperPortfolio({ account, tradeableQuotes, requestedTick
     document.querySelector(".order-ticket")?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
+  if (accountLoading) return <section className="shell page-section portfolio-page"><div className="portfolio-loading"><span/><div><b>Loading your portfolios</b><p>Checking secure account storage and the latest saved balances.</p></div></div></section>;
+
   if (!account) return <section className="shell page-section portfolio-page">
     <div className="page-hero"><span className="kicker">PAPER BROKERAGE</span><h1>Create your simulated account.</h1><p>Choose an opening cash balance, then decide when and how much to buy. Orders are local simulations and never reach a broker.</p></div>
+    <div className="portfolio-name-field"><label>PORTFOLIO NAME<input value={portfolioName} maxLength={48} onChange={(event) => setPortfolioName(event.target.value)} placeholder="My Portfolio"/></label></div>
     <div className="account-onboarding">
       <div className="account-onboarding-copy"><span className="onboarding-mark"><RadarIcon size={30}/></span><div><h2>Start with cash, not forced positions.</h2><p>Your account will track buying power, cost basis, realized gains, open-position performance, and every paper order.</p></div></div>
       <label>OPENING CASH BALANCE<span><b>$</b><input aria-label="Opening cash balance" type="number" min="1000" step="1000" value={openingCash} onChange={(event) => setOpeningCash(Math.max(1000, Number(event.target.value)))}/><small>USD</small></span></label>
-      <button className="primary" onClick={() => onCreateCashAccount(openingCash)}><PlusIcon size={16}/> Create paper account</button>
+      <button className="primary" onClick={() => onCreateCashAccount(portfolioName, openingCash)}><PlusIcon size={16}/> Create paper account</button>
     </div>
-    <div className="portfolio-guardrail"><ShieldIcon size={18}/><span>Every stock in the 2,000-name research universe can be purchased. Open any category result in Search to prefill its paper trade ticket.</span></div>
+    <div className="portfolio-guardrail"><ShieldIcon size={18}/><span>Every stock in the 2,000-name research universe can be purchased. {user ? "This portfolio will be saved to your account." : "Create an account to sync multiple portfolios across devices."}</span>{!user && <button onClick={onOpenAccount}>Create account</button>}</div>
   </section>;
 
   return <section className="shell page-section portfolio-page">
+    <div className="portfolio-commandbar">
+      <div><span className="kicker">ACTIVE PORTFOLIO</span>{user ? <select aria-label="Active portfolio" value={activePortfolioId || ""} onChange={(event) => onSwitchPortfolio(event.target.value)}>{portfolios.map((portfolio) => <option key={portfolio.id} value={portfolio.id}>{portfolio.name}</option>)}</select> : <strong>Local Portfolio</strong>}</div>
+      <div className="portfolio-command-actions">{user ? <><span className="cloud-saved"><ShieldIcon size={14}/> Saved to account</span><button className="secondary-button" onClick={() => setCreating((value) => !value)}><PlusIcon size={15}/> New portfolio</button></> : <button className="secondary-button" onClick={onOpenAccount}><UserIcon size={15}/> Sign in to save</button>}</div>
+    </div>
+    {creating && <div className="new-portfolio-panel"><label>NAME<input value={newName} maxLength={48} onChange={(event) => setNewName(event.target.value)}/></label><label>OPENING CASH<input type="number" min="1000" max="100000000" step="1000" value={newCash} onChange={(event) => setNewCash(Number(event.target.value))}/></label><button className="primary" onClick={() => { onCreatePortfolio(newName, newCash); setCreating(false); }}><PlusIcon size={15}/> Create portfolio</button><button className="text-button" onClick={() => setCreating(false)}>Cancel</button></div>}
     <div className="page-hero portfolio-hero"><div><span className="kicker">PAPER BROKERAGE</span><h1>Your simulated portfolio.</h1><p>Cash, positions, cost basis, and an immutable trade history—controlled by you.</p></div><div className="account-id"><small>ACCOUNT</small><strong>SF-{account.createdAt.slice(2, 10).replaceAll("-", "")}</strong><span>Paper · USD</span></div></div>
 
     <div className="portfolio-summary brokerage-summary">
@@ -119,6 +141,19 @@ export default function PaperPortfolio({ account, tradeableQuotes, requestedTick
     </div>
 
     <div className="allocation-strip"><span style={{ width: `${100 - metrics!.cashWeight}%` }}/><div><b>{(100 - metrics!.cashWeight).toFixed(1)}% invested</b><small>{metrics!.cashWeight}% held in cash</small></div></div>
+
+    <section className="agent-card">
+      <div className="agent-card-icon"><SparkIcon size={24}/></div>
+      <div className="agent-card-copy"><span className="kicker">AI CONVICTION AGENT</span><h2>Put the strongest signals to work.</h2><p>The agent buys the latest highest-conviction opportunities while preserving your cash reserve. It never sells, borrows, or places real brokerage orders.</p>{activeAgent?.lastSummary && <small>{activeAgent.lastSummary}{activeAgent.lastRunAt ? ` · ${new Date(activeAgent.lastRunAt).toLocaleString()}` : ""}</small>}</div>
+      <div className="agent-controls">
+        {user && activeAgent ? <>
+          <label className="agent-toggle"><input type="checkbox" checked={activeAgent.enabled} onChange={(event) => onUpdateAgent({ enabled: event.target.checked })}/><span/><b>{activeAgent.enabled ? "Auto-invest on" : "Auto-invest off"}</b></label>
+          <label>POSITIONS<select value={activeAgent.targetPositions} onChange={(event) => onUpdateAgent({ targetPositions: Number(event.target.value) })}>{[4, 6, 8, 10, 12].map((count) => <option key={count} value={count}>{count}</option>)}</select></label>
+          <label>CASH RESERVE<select value={activeAgent.cashReservePct} onChange={(event) => onUpdateAgent({ cashReservePct: Number(event.target.value) })}>{[5, 10, 15, 20, 25, 30, 40].map((percent) => <option key={percent} value={percent}>{percent}%</option>)}</select></label>
+        </> : <span className="agent-local-note">Local one-time run · Sign in for scheduled auto-investing</span>}
+        <button className="primary" onClick={onRunAgent}><SparkIcon size={15}/> Run agent now</button>
+      </div>
+    </section>
 
     <div className="brokerage-layout">
       <div className="positions-card">
@@ -158,7 +193,7 @@ export default function PaperPortfolio({ account, tradeableQuotes, requestedTick
 
     <div className="activity-card">
       <div className="brokerage-card-heading"><div><span className="kicker">ACCOUNT ACTIVITY</span><h2>Trade history</h2></div><span>{account.transactions.length} records</span></div>
-      {account.transactions.length ? <div className="activity-list"><div className="activity-row header"><span>Type</span><span>Security</span><span>Shares</span><span>Price</span><span>Total</span><span>Realized P&amp;L</span><span>Executed</span></div>{account.transactions.slice(0, 20).map((transaction) => <div className="activity-row" key={transaction.id}><span><b className={`transaction-side ${transaction.side.toLowerCase()}`}>{transaction.side}</b></span><span><b>{transaction.ticker}</b><small>{transaction.company}</small></span><span data-label="Shares">{shares(transaction.shares)}</span><span data-label="Price">{money(transaction.price)}</span><span data-label="Total">{money(transaction.total)}</span><span data-label="Realized P&L" className={transaction.realizedPnl >= 0 ? "positive" : "negative"}>{transaction.side === "SELL" ? signedMoney(transaction.realizedPnl) : "—"}</span><span data-label="Executed">{new Date(transaction.executedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span></div>)}</div> : <div className="positions-empty"><ShieldIcon size={28}/><div><b>No trades yet.</b><span>Your first buy or sell will appear here.</span></div></div>}
+      {account.transactions.length ? <div className="activity-list"><div className="activity-row header"><span>Type</span><span>Security</span><span>Shares</span><span>Price</span><span>Total</span><span>Realized P&amp;L</span><span>Executed</span></div>{account.transactions.slice(0, 20).map((transaction) => <div className="activity-row" key={transaction.id}><span><b className={`transaction-side ${transaction.side.toLowerCase()}`}>{transaction.source === "ai" && transaction.side === "BUY" ? "AI BUY" : transaction.side}</b></span><span><b>{transaction.ticker}</b><small>{transaction.company}</small></span><span data-label="Shares">{shares(transaction.shares)}</span><span data-label="Price">{money(transaction.price)}</span><span data-label="Total">{money(transaction.total)}</span><span data-label="Realized P&L" className={transaction.realizedPnl >= 0 ? "positive" : "negative"}>{transaction.side === "SELL" ? signedMoney(transaction.realizedPnl) : "—"}</span><span data-label="Executed">{new Date(transaction.executedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span></div>)}</div> : <div className="positions-empty"><ShieldIcon size={28}/><div><b>No trades yet.</b><span>Your first buy or sell will appear here.</span></div></div>}
     </div>
 
     <div className="portfolio-guardrail"><ShieldIcon size={18}/><span>All 2,000 researched stocks are paper-trade eligible. Selling is always available for owned positions, and nothing is deleted from account history.</span><button onClick={onOpenSearch}>Browse all stocks</button></div>

@@ -412,3 +412,102 @@ footer { padding: 34px 0; background: #0d201c; }
 @media (prefers-reduced-motion: reduce) {
   *, *:before, *:after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* Accounts, durable portfolios, and the conviction agent */
+.topbar-actions { justify-self: end; display: flex; align-items: center; gap: 9px; }
+.account-button { min-height: 46px; display: flex; align-items: center; gap: 8px; padding: 5px 11px 5px 6px; border: 1px solid var(--line); border-radius: 13px; background: rgba(255,255,255,.78); box-shadow: var(--shadow-xs); cursor: pointer; }
+.account-button > span { width: 33px; height: 33px; display: grid; place-items: center; border-radius: 10px; color: #17382f; background: linear-gradient(145deg, #d9fa94, #c1ef63); font-size: 10px; font-weight: 800; }
+.account-button b { max-width: 92px; overflow: hidden; color: var(--ink); font-size: 10px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.account-button:hover { border-color: #bfd0c3; background: #fff; }
+
+.auth-modal-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(6,20,16,.58); backdrop-filter: blur(12px); animation: modal-backdrop-in .18s ease both; }
+.auth-modal { width: min(520px, 100%); overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 22px; background: #fff; box-shadow: 0 32px 100px rgba(4,20,15,.3); animation: modal-page-in .22s ease both; }
+.auth-modal-header { min-height: 104px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px; padding: 23px 25px; color: #fff; background: linear-gradient(135deg,#10231f,#1c4036); }
+.auth-modal-header .brand-mark { width: 43px; height: 43px; }
+.auth-modal-header .kicker { color: var(--lime); }
+.auth-modal-header h2 { margin: 5px 0 0; font-family: var(--display); font-size: 26px; font-weight: 400; line-height: 1; }
+.auth-close { width: 39px; height: 39px; display: grid; place-items: center; border: 1px solid rgba(255,255,255,.15); border-radius: 11px; color: #fff; background: rgba(255,255,255,.07); cursor: pointer; }
+.auth-intro { margin: 0; padding: 24px 25px 18px; color: #65746f; font-size: 11px; line-height: 1.6; }
+.auth-warning, .auth-error { margin: 0 25px 17px; padding: 11px 13px; border: 1px solid #ead9a8; border-radius: 10px; color: #765d22; background: #fff9e8; font-size: 10px; line-height: 1.45; }
+.auth-warning { display: flex; align-items: flex-start; gap: 8px; }
+.auth-error { margin: 0; border-color: #ecc8c5; color: #9a3f3a; background: #fff3f2; }
+.auth-tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 0 25px; padding: 4px; border: 1px solid var(--line); border-radius: 12px; background: #f3f5f1; }
+.auth-tabs button { min-height: 38px; border: 0; border-radius: 8px; color: #75827e; background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; }
+.auth-tabs button.active { color: #fff; background: var(--ink); box-shadow: var(--shadow-xs); }
+.auth-form { display: grid; gap: 14px; padding: 20px 25px 26px; }
+.auth-form label, .new-portfolio-panel label, .portfolio-name-field label { display: grid; gap: 7px; color: #7b8984; font-size: 8px; font-weight: 750; letter-spacing: .1em; }
+.auth-form input, .new-portfolio-panel input, .portfolio-name-field input { min-height: 44px; width: 100%; padding: 0 13px; border: 1px solid var(--line-strong); border-radius: 10px; outline: 0; color: var(--ink); background: #fafbf8; font-size: 12px; letter-spacing: 0; }
+.auth-form input:focus, .new-portfolio-panel input:focus, .portfolio-name-field input:focus { border-color: #7bb094; box-shadow: 0 0 0 3px rgba(23,111,88,.09); }
+.auth-form > small { margin-top: -6px; color: #89948f; font-size: 9px; line-height: 1.45; }
+.auth-submit { width: 100%; margin-top: 2px; }
+.account-profile { display: grid; justify-items: center; gap: 11px; padding: 30px 26px; text-align: center; }
+.profile-avatar { width: 64px; height: 64px; display: grid; place-items: center; border-radius: 20px; color: #17372f; background: linear-gradient(145deg,#dcfa9d,#b9ec55); font-family: var(--display); font-size: 21px; }
+.account-profile > div:nth-child(2) { display: grid; gap: 4px; }
+.account-profile b { font-size: 14px; }
+.account-profile span { color: #7a8782; font-size: 10px; }
+.account-benefits { width: 100%; display: grid; gap: 9px; margin: 7px 0; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: #f7f9f5; text-align: left; }
+.account-benefits span { display: flex; align-items: center; gap: 8px; color: #566660; }
+.secondary-button, .text-button { min-height: 39px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 0 13px; border: 1px solid var(--line-strong); border-radius: 10px; color: #40534c; background: #fff; font-size: 10px; font-weight: 750; cursor: pointer; }
+.text-button { border-color: transparent; background: transparent; }
+
+.portfolio-loading { min-height: 360px; display: flex; align-items: center; justify-content: center; gap: 15px; }
+.portfolio-loading > span { width: 31px; height: 31px; border: 3px solid #dbe4dc; border-top-color: var(--green); border-radius: 50%; animation: spin .8s linear infinite; }
+.portfolio-loading div { display: grid; gap: 4px; }
+.portfolio-loading b { font-family: var(--display); font-size: 18px; font-weight: 400; }
+.portfolio-loading p { margin: 0; color: var(--muted); font-size: 10px; }
+.portfolio-name-field { max-width: 360px; margin: 14px 0; }
+.portfolio-commandbar { min-height: 66px; display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 28px; padding: 11px 14px 11px 17px; border: 1px solid var(--line); border-radius: 15px; background: rgba(255,255,255,.78); box-shadow: var(--shadow-xs); }
+.portfolio-commandbar > div:first-child { display: flex; align-items: center; gap: 12px; }
+.portfolio-commandbar select { min-width: 210px; min-height: 40px; padding: 0 34px 0 12px; border: 1px solid var(--line-strong); border-radius: 10px; color: var(--ink); background: #fff; font-size: 12px; font-weight: 700; }
+.portfolio-commandbar strong { font-family: var(--display); font-size: 16px; font-weight: 400; }
+.portfolio-command-actions { display: flex; align-items: center; gap: 10px; }
+.cloud-saved { display: flex; align-items: center; gap: 6px; color: var(--green); font-size: 9px; font-weight: 700; }
+.new-portfolio-panel { display: grid; grid-template-columns: minmax(180px,1fr) minmax(150px,.6fr) auto auto; align-items: end; gap: 12px; margin: -14px 0 28px; padding: 16px; border: 1px solid #cddace; border-radius: 14px; background: #f7faf5; }
+
+.agent-card { display: grid; grid-template-columns: auto minmax(250px,1fr) minmax(330px,.75fr); align-items: center; gap: 21px; margin: 18px 0; padding: 22px; overflow: hidden; border: 1px solid #c9d9ca; border-radius: 17px; background: radial-gradient(circle at 93% 0, rgba(201,246,111,.22), transparent 18rem), linear-gradient(135deg,#fafff3,#f4f8f2); box-shadow: var(--shadow-sm); }
+.agent-card-icon { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 16px; color: #17372f; background: linear-gradient(145deg,#d9fa93,#b8ea55); box-shadow: 0 9px 24px rgba(112,160,38,.18); }
+.agent-card-copy h2 { margin: 6px 0 5px; font-family: var(--display); font-size: 23px; font-weight: 400; letter-spacing: -.025em; }
+.agent-card-copy p { max-width: 620px; margin: 0; color: #65746f; font-size: 10px; line-height: 1.55; }
+.agent-card-copy > small { display: block; margin-top: 8px; color: var(--green); font-size: 9px; }
+.agent-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.agent-controls > label:not(.agent-toggle) { display: grid; gap: 5px; color: #7b8984; font-size: 8px; font-weight: 750; letter-spacing: .08em; }
+.agent-controls select { min-height: 38px; padding: 0 9px; border: 1px solid var(--line-strong); border-radius: 9px; background: #fff; font-size: 10px; }
+.agent-toggle { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; min-height: 35px; cursor: pointer; }
+.agent-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+.agent-toggle > span { width: 35px; height: 20px; padding: 3px; border-radius: 20px; background: #cdd6cf; transition: background .18s ease; }
+.agent-toggle > span:after { content: ""; display: block; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.15); transition: transform .18s ease; }
+.agent-toggle input:checked + span { background: var(--green); }
+.agent-toggle input:checked + span:after { transform: translateX(15px); }
+.agent-toggle b { font-size: 10px; }
+.agent-controls .primary, .agent-local-note { grid-column: 1 / -1; }
+.agent-local-note { color: #788680; font-size: 9px; line-height: 1.4; }
+
+@media (max-width: 1180px) {
+  .market-chip { display: none; }
+  .agent-card { grid-template-columns: auto 1fr; }
+  .agent-controls { grid-column: 2; }
+}
+
+@media (max-width: 760px) {
+  .topbar-actions { gap: 0; }
+  .account-button { min-height: 40px; padding: 4px; }
+  .account-button > span { width: 31px; height: 31px; }
+  .account-button b { display: none; }
+  .auth-modal-backdrop { place-items: end stretch; padding: 0; }
+  .auth-modal { width: 100%; max-height: calc(100dvh - 16px); overflow: auto; border-radius: 21px 21px 0 0; }
+  .auth-modal-header { min-height: 92px; padding: 19px 18px; }
+  .auth-intro { padding: 20px 18px 15px; }
+  .auth-tabs { margin: 0 18px; }
+  .auth-form { padding: 17px 18px 23px; }
+  .auth-warning { margin-left: 18px; margin-right: 18px; }
+  .portfolio-commandbar { align-items: stretch; flex-direction: column; }
+  .portfolio-commandbar > div:first-child { justify-content: space-between; }
+  .portfolio-commandbar select { min-width: 0; max-width: 65%; }
+  .portfolio-command-actions { justify-content: space-between; }
+  .cloud-saved { display: none; }
+  .new-portfolio-panel { grid-template-columns: 1fr; margin-top: -16px; }
+  .agent-card { grid-template-columns: auto 1fr; align-items: start; padding: 18px; }
+  .agent-card-icon { width: 45px; height: 45px; border-radius: 14px; }
+  .agent-card-copy h2 { font-size: 21px; }
+  .agent-controls { grid-column: 1 / -1; }
+}

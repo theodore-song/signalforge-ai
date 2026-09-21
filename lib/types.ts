@@ -81,6 +81,7 @@ export type PortfolioHolding = {
 export type PortfolioTransaction = {
   id: string;
   side: "BUY" | "SELL" | "OPENING";
+  source?: "user" | "ai";
   ticker: string;
   company: string;
   shares: number;
@@ -100,6 +101,36 @@ export type PaperPortfolioAccount = {
   createdAt: string;
   updatedAt: string;
   quotesUpdatedAt?: string;
+};
+
+export type AuthUser = {
+  id: string;
+  name: string;
+  email: string;
+};
+
+export type PortfolioAgentSettings = {
+  enabled: boolean;
+  targetPositions: number;
+  cashReservePct: number;
+  lastRunAt?: string;
+  lastRunScanId?: string;
+  lastSummary?: string;
+};
+
+export type SavedPortfolio = {
+  id: string;
+  userId: string;
+  name: string;
+  account: PaperPortfolioAccount;
+  agent: PortfolioAgentSettings;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AccountSessionResponse = {
+  user: AuthUser | null;
+  storageReady: boolean;
 };
 
 export type PortfolioQuote = {

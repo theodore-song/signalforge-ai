@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { accountMetrics, applyHoldingQuotes, buyStock, createAiAccount, createCashAccount, migratePaperAccount, sellStock } from "../lib/portfolio";
+import { accountMetrics, applyHoldingQuotes, buyStock, createAiAccount, createCashAccount, migratePaperAccount, runConvictionAgent, sellStock } from "../lib/portfolio";
 import type { StockPick } from "../lib/types";
 
 function pick(ticker: string, price: number, score: number): StockPick {
@@ -101,4 +101,20 @@ test("legacy position arrays migrate without losing holdings", () => {
   assert.equal(migrated.cash, 9_000);
   assert.equal(migrated.holdings[0].averageCost, 100);
   assert.equal(migrated.transactions[0].side, "OPENING");
+});
+
+test("conviction agent buys ranked ideas while preserving its cash reserve", () => {
+  const account = createCashAccount(100_000, "2026-09-20T14:00:00.000Z");
+  const result = runConvictionAgent(account, [pick("AAA", 100, 92), pick("BBB", 50, 85), pick("CCC", 25, 78)], 2, 20, "2026-09-20T14:05:00.000Z");
+  assert.equal(result.orders, 2);
+  assert.deepEqual(result.account.holdings.map((holding) => holding.ticker), ["AAA", "BBB"]);
+  assert.ok(result.account.cash >= 19_999 && result.account.cash <= 20_001);
+  assert.ok(result.account.transactions.every((transaction) => transaction.source === "ai"));
+});
+
+test("conviction agent does not spend through an already satisfied reserve", () => {
+  const account = buyStock(createCashAccount(100_000), pick("OLD", 90, 70), 1_000);
+  const result = runConvictionAgent(account, [pick("AAA", 100, 92)], 1, 15);
+  assert.equal(result.orders, 0);
+  assert.equal(result.account, account);
 });

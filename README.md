@@ -10,7 +10,9 @@ SignalForge is a public, Vercel-ready stock research dashboard. It combines expe
 - Search tab with six factor leaderboards, ticker/company search, sector filters, pagination, and five-stock comparison
 - 13F stock details with separate STOCK Act politician purchase examples and estimated price returns
 - Fresh scan endpoint with optional OpenAI investment-committee brief
-- Persistent paper brokerage account with cash, fractional buy/sell orders, cost basis, P&L, and trade history
+- Secure email/password accounts with durable, cross-release portfolio storage
+- Multiple named paper portfolios per account with cash, fractional orders, cost basis, P&L, and trade history
+- Opt-in AI conviction agent that buys the latest composite leaders while preserving a configurable cash reserve
 - Automatic browser refresh every 60 seconds during the regular US session
 - Vercel Cron endpoint plus optional Upstash/Vercel KV persistence
 - Optional live Alpaca IEX snapshots and external alternative-data feed adapters
@@ -48,7 +50,7 @@ Set `OPENAI_API_KEY` to enable the server-side investment committee brief. `OPEN
 
 ## Scheduled scans
 
-`vercel.json` invokes `/api/cron` once each weekday during the US session, which is compatible with Vercel Hobby. Vercel sends the production cron authorization header when `CRON_SECRET` is configured. Add `KV_REST_API_URL` and `KV_REST_API_TOKEN` to persist scheduled snapshots. Without KV, visitors still receive a current on-demand scan.
+`vercel.json` invokes `/api/cron` once each weekday during the US session, which is compatible with Vercel Hobby. Vercel sends the production cron authorization header when `CRON_SECRET` is configured. Add `KV_REST_API_URL` and `KV_REST_API_TOKEN` (or the current `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` names) to persist scheduled snapshots, user accounts, sessions, portfolios, and AI-agent settings. Without Redis, market research remains available but account creation is disabled and guest portfolios stay local.
 
 Pro and Enterprise projects can change the schedule to `*/10 13-21 * * 1-5` for ten-minute weekday scans. The UTC window is intentionally broad because US daylight-saving time changes the UTC market hours. The server route and open dashboards can still refresh on demand regardless of plan.
 
@@ -63,7 +65,11 @@ Searchable factors are `quality`, `earnings`, `momentum`, `billionaire`, `quietC
 
 ## Paper brokerage
 
-Visitors can create a cash-only simulated account or generate an AI starter portfolio that retains a 15% cash reserve. Buys support fractional shares across the complete 2,000-stock universe: open any company from any Search category to prefill its trade ticket. Repeat buys update weighted average cost; sells update cash and realized P&L; complete trade history remains stored locally in the browser. Existing position-only portfolios are migrated automatically.
+Visitors can create a cash-only simulated account or generate an AI starter portfolio that retains a 15% cash reserve. Signed-in users can create and switch between multiple named portfolios; all balances, positions, trade history, and agent settings are stored server-side and survive deployments. Existing browser portfolios are offered for import when a user registers.
+
+The conviction agent is paper-only. A user can run it once or enable scheduled auto-investing for a saved portfolio. It buys the current highest composite-conviction ideas, uses score-weighted sizing, honors the selected position count and cash reserve, and never sells, borrows, or connects to a brokerage. AI-originated orders are identified separately in account activity.
+
+Buys support fractional shares across the complete 2,000-stock universe: open any company from any Search category to prefill its trade ticket. Repeat buys update weighted average cost; sells update cash and realized P&L; complete trade history is retained. Existing position-only portfolios are migrated automatically.
 
 Every open position is repriced through `GET /api/quotes?symbols=AAPL,MSFT` on load and once per minute while the site remains open. The endpoint covers up to 50 held tickers, shares the universe engine's five-minute market bucket, and reports whether each quote is live via Alpaca or explicitly modeled. Last successful quote freshness is shown above the holdings table and persisted with the account.
 
