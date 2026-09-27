@@ -29,6 +29,7 @@ type Props = {
   portfolios: SavedPortfolio[];
   activePortfolioId: string | null;
   activeAgent: PortfolioAgentSettings | null;
+  saveState: "idle" | "saving" | "saved" | "local" | "error";
   tradeableQuotes: TradeQuote[];
   requestedTicker: string | null;
   defaultCapital: number;
@@ -43,7 +44,7 @@ type Props = {
   onToast: (message: string) => void;
 };
 
-export default function PaperPortfolio({ account, accountLoading, user, portfolios, activePortfolioId, activeAgent, tradeableQuotes, requestedTicker, defaultCapital, onCreateCashAccount, onCreatePortfolio, onSwitchPortfolio, onChange, onOpenSearch, onOpenAccount, onRunAgent, onUpdateAgent, onToast }: Props) {
+export default function PaperPortfolio({ account, accountLoading, user, portfolios, activePortfolioId, activeAgent, saveState, tradeableQuotes, requestedTicker, defaultCapital, onCreateCashAccount, onCreatePortfolio, onSwitchPortfolio, onChange, onOpenSearch, onOpenAccount, onRunAgent, onUpdateAgent, onToast }: Props) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [symbol, setSymbol] = useState(requestedTicker || tradeableQuotes[0]?.ticker || "");
   const [quantity, setQuantity] = useState("");
@@ -127,7 +128,10 @@ export default function PaperPortfolio({ account, accountLoading, user, portfoli
   return <section className="shell page-section portfolio-page">
     <div className="portfolio-commandbar">
       <div><span className="kicker">ACTIVE PORTFOLIO</span>{user ? <select aria-label="Active portfolio" value={activePortfolioId || ""} onChange={(event) => onSwitchPortfolio(event.target.value)}>{portfolios.map((portfolio) => <option key={portfolio.id} value={portfolio.id}>{portfolio.name}</option>)}</select> : <strong>Local Portfolio</strong>}</div>
-      <div className="portfolio-command-actions">{user ? <><span className="cloud-saved"><ShieldIcon size={14}/> Saved to account</span><button className="secondary-button" onClick={() => setCreating((value) => !value)}><PlusIcon size={15}/> New portfolio</button></> : <button className="secondary-button" onClick={onOpenAccount}><UserIcon size={15}/> Sign in to save</button>}</div>
+      <div className="portfolio-command-actions">
+        <span className={`cloud-saved ${saveState}`}><ShieldIcon size={14}/>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Save needs retry" : saveState === "local" ? "Saved on this device" : user ? "Saved to account" : "Backed up for this browser"}</span>
+        {user ? <button className="secondary-button" onClick={() => setCreating((value) => !value)}><PlusIcon size={15}/> New portfolio</button> : <button className="secondary-button" onClick={onOpenAccount}><UserIcon size={15}/> Sign in for permanent access</button>}
+      </div>
     </div>
     {creating && <div className="new-portfolio-panel"><label>NAME<input value={newName} maxLength={48} onChange={(event) => setNewName(event.target.value)}/></label><label>OPENING CASH<input type="number" min="1000" max="100000000" step="1000" value={newCash} onChange={(event) => setNewCash(Number(event.target.value))}/></label><button className="primary" onClick={() => { onCreatePortfolio(newName, newCash); setCreating(false); }}><PlusIcon size={15}/> Create portfolio</button><button className="text-button" onClick={() => setCreating(false)}>Cancel</button></div>}
     <div className="page-hero portfolio-hero"><div><span className="kicker">PAPER BROKERAGE</span><h1>Your simulated portfolio.</h1><p>Cash, positions, cost basis, and an immutable trade history—controlled by you.</p></div><div className="account-id"><small>ACCOUNT</small><strong>SF-{account.createdAt.slice(2, 10).replaceAll("-", "")}</strong><span>Paper · USD</span></div></div>

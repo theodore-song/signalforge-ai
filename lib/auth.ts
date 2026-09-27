@@ -6,7 +6,7 @@ import { readJson, redisCommand, writeJson } from "./redis";
 
 const scrypt = promisify(nodeScrypt);
 export const SESSION_COOKIE = "signalforge_session";
-const SESSION_TTL = 60 * 60 * 24 * 30;
+const SESSION_TTL = 60 * 60 * 24 * 365;
 
 type StoredUser = AuthUser & { passwordHash: string; createdAt: string };
 type StoredSession = { userId: string; expiresAt: string };

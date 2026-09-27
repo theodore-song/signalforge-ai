@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AuthUser, PaperPortfolioAccount, PortfolioAgentSettings, PortfolioQuotesResponse, SavedPortfolio, ScanResult, ScreenerResponse, ScreenerRow, StockPick } from "@/lib/types";
 import { applyHoldingQuotes, createAiAccount, createCashAccount, migratePaperAccount, runConvictionAgent, type TradeQuote } from "@/lib/portfolio";
 import { ArrowIcon, PlusIcon, RadarIcon, RefreshIcon, ShieldIcon, SparkIcon, UserIcon } from "./Icons";
@@ -50,6 +50,8 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
   const [activePortfolioId, setActivePortfolioId] = useState<string | null>(null);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [accountLoading, setAccountLoading] = useState(true);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "local" | "error">("idle");
+  const saveRequest = useRef(0);
   const holdingSymbols = useMemo(() => account?.holdings.map((holding) => holding.ticker).sort().join(",") || "", [account?.holdings]);
   const activePortfolio = portfolios.find((portfolio) => portfolio.id === activePortfolioId) || null;
 
@@ -74,19 +76,66 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
           const next = result.portfolios || [];
           const remembered = localStorage.getItem(`signalforge:active-portfolio:${session.user.id}`);
           const chosen = next.find((portfolio) => portfolio.id === remembered) || next[0] || null;
+          let chosenAccount = chosen?.account || null;
+          if (chosen) {
+            const draftKey = `signalforge:portfolio-draft:${session.user.id}:${chosen.id}`;
+            const draft = localStorage.getItem(draftKey);
+            if (draft) {
+              try {
+                const recovered = migratePaperAccount(JSON.parse(draft));
+                if (recovered && new Date(recovered.updatedAt).getTime() > new Date(chosen.account.updatedAt).getTime()) {
+                  chosenAccount = recovered;
+                  const saved = await fetch(`/api/portfolios/${chosen.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: recovered }), keepalive: true });
+                  if (saved.ok) localStorage.removeItem(draftKey);
+                }
+              } catch { /* ignore corrupt recovery drafts */ }
+            }
+          }
           setPortfolios(next);
           setActivePortfolioId(chosen?.id || null);
-          setAccount(chosen?.account || null);
+          setAccount(chosenAccount);
+          setSaveState("saved");
         } else {
-          setAccount(localAccount);
+          let remoteAccount: PaperPortfolioAccount | null = null;
+          if (session.storageReady) {
+            const response = await fetch("/api/guest-portfolio", { cache: "no-store" });
+            if (response.ok) {
+              const result = await response.json() as { account?: unknown };
+              remoteAccount = migratePaperAccount(result.account);
+            }
+          }
+          const localChanged = localAccount ? new Date(localAccount.updatedAt).getTime() : 0;
+          const remoteChanged = remoteAccount ? new Date(remoteAccount.updatedAt).getTime() : 0;
+          const chosen = localChanged >= remoteChanged ? localAccount : remoteAccount;
+          setAccount(chosen);
+          if (chosen) localStorage.setItem("signalforge-paper-portfolio", JSON.stringify(chosen));
+          if (chosen && session.storageReady && (!remoteAccount || localChanged > remoteChanged)) {
+            const saved = await fetch("/api/guest-portfolio", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: chosen }), keepalive: true });
+            setSaveState(saved.ok ? "saved" : "error");
+          } else setSaveState(session.storageReady ? "saved" : "local");
         }
       } catch {
-        if (!disposed) setAccount(localAccount);
+        if (!disposed) { setAccount(localAccount); setSaveState(localAccount ? "local" : "idle"); }
       } finally { if (!disposed) setAccountLoading(false); }
     }
     void hydrateAccount();
     return () => { disposed = true; };
   }, []);
+
+  useEffect(() => {
+    if (!account) return;
+    const saveBeforeLeaving = () => {
+      if (user && activePortfolioId) {
+        localStorage.setItem(`signalforge:portfolio-draft:${user.id}:${activePortfolioId}`, JSON.stringify(account));
+        void fetch(`/api/portfolios/${activePortfolioId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account }), keepalive: true });
+      } else {
+        localStorage.setItem("signalforge-paper-portfolio", JSON.stringify(account));
+        if (storageReady) void fetch("/api/guest-portfolio", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account }), keepalive: true });
+      }
+    };
+    window.addEventListener("pagehide", saveBeforeLeaving);
+    return () => window.removeEventListener("pagehide", saveBeforeLeaving);
+  }, [account, user, activePortfolioId, storageReady]);
 
   useEffect(() => {
     setClock(Date.now());
@@ -122,8 +171,11 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
           if (next !== current) {
             if (user && activePortfolioId) {
               setPortfolios((items) => items.map((item) => item.id === activePortfolioId ? { ...item, account: next, updatedAt: next.updatedAt } : item));
-              void fetch(`/api/portfolios/${activePortfolioId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: next }) });
-            } else localStorage.setItem("signalforge-paper-portfolio", JSON.stringify(next));
+              void fetch(`/api/portfolios/${activePortfolioId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: next }), keepalive: true });
+            } else {
+              localStorage.setItem("signalforge-paper-portfolio", JSON.stringify(next));
+              if (storageReady) void fetch("/api/guest-portfolio", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: next }), keepalive: true });
+            }
           }
           return next;
         });
@@ -132,16 +184,39 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
     void refreshPortfolioQuotes();
     const timer = window.setInterval(refreshPortfolioQuotes, 60_000);
     return () => { disposed = true; window.clearInterval(timer); };
-  }, [holdingSymbols, user, activePortfolioId]);
+  }, [holdingSymbols, user, activePortfolioId, storageReady]);
 
   function persist(next: PaperPortfolioAccount) {
     setAccount(next);
+    const request = ++saveRequest.current;
+    setSaveState("saving");
     if (user && activePortfolioId) {
+      const draftKey = `signalforge:portfolio-draft:${user.id}:${activePortfolioId}`;
+      localStorage.setItem(draftKey, JSON.stringify(next));
       setPortfolios((items) => items.map((item) => item.id === activePortfolioId ? { ...item, account: next, updatedAt: next.updatedAt } : item));
-      void fetch(`/api/portfolios/${activePortfolioId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: next }) })
-        .then((response) => { if (!response.ok) announce("This change is saved locally but cloud sync needs another try"); })
-        .catch(() => announce("This change is saved locally but cloud sync needs another try"));
-    } else localStorage.setItem("signalforge-paper-portfolio", JSON.stringify(next));
+      void fetch(`/api/portfolios/${activePortfolioId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: next }), keepalive: true })
+        .then((response) => {
+          if (!response.ok) throw new Error("cloud save failed");
+          const currentDraft = localStorage.getItem(draftKey);
+          if (currentDraft) {
+            try {
+              const parsed = migratePaperAccount(JSON.parse(currentDraft));
+              if (parsed?.updatedAt === next.updatedAt) localStorage.removeItem(draftKey);
+            } catch { /* keep an unreadable draft for manual recovery */ }
+          }
+          if (request === saveRequest.current) setSaveState("saved");
+        })
+        .catch(() => { if (request === saveRequest.current) setSaveState("error"); announce("This change is safe on this device, but cloud sync needs another try"); });
+    } else {
+      localStorage.setItem("signalforge-paper-portfolio", JSON.stringify(next));
+      if (!storageReady) { setSaveState("local"); return; }
+      void fetch("/api/guest-portfolio", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account: next }), keepalive: true })
+        .then((response) => {
+          if (!response.ok) throw new Error("guest backup failed");
+          if (request === saveRequest.current) setSaveState("saved");
+        })
+        .catch(() => { if (request === saveRequest.current) setSaveState("error"); announce("This change is safe on this device, but the backup needs another try"); });
+    }
   }
 
   async function loadPortfolios(preferredId?: string) {
@@ -159,7 +234,18 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
     const chosen = portfolios.find((portfolio) => portfolio.id === id);
     if (!chosen) return;
     setActivePortfolioId(id);
-    setAccount(chosen.account);
+    let chosenAccount = chosen.account;
+    if (user) {
+      const draft = localStorage.getItem(`signalforge:portfolio-draft:${user.id}:${id}`);
+      if (draft) {
+        try {
+          const recovered = migratePaperAccount(JSON.parse(draft));
+          if (recovered && new Date(recovered.updatedAt).getTime() > new Date(chosenAccount.updatedAt).getTime()) chosenAccount = recovered;
+        } catch { /* ignore corrupt recovery drafts */ }
+      }
+    }
+    setAccount(chosenAccount);
+    setSaveState("saved");
     setTradeTicker(null);
     if (user) localStorage.setItem(`signalforge:active-portfolio:${user.id}`, id);
   }
@@ -342,7 +428,7 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
 
       {activeTab === "search" && <SearchWorkspace onTrade={openTradeTicket} onInspect={inspectSearchStock} portfolioTickers={account?.holdings.map((holding) => holding.ticker) || []}/>}
 
-      {activeTab === "portfolio" && <PaperPortfolio account={account} accountLoading={accountLoading} user={user} portfolios={portfolios} activePortfolioId={activePortfolioId} activeAgent={activePortfolio?.agent || null} tradeableQuotes={tradeableQuotes} requestedTicker={tradeTicker} defaultCapital={capital} onCreateCashAccount={(name, amount) => void createNewPortfolio(name, amount)} onCreatePortfolio={(name, amount) => void createNewPortfolio(name, amount)} onSwitchPortfolio={switchPortfolio} onChange={persist} onOpenSearch={() => setActiveTab("search")} onOpenAccount={() => setAccountModalOpen(true)} onRunAgent={() => void runAgentNow()} onUpdateAgent={(changes) => void updateAgent(changes)} onToast={announce}/>}
+      {activeTab === "portfolio" && <PaperPortfolio account={account} accountLoading={accountLoading} user={user} portfolios={portfolios} activePortfolioId={activePortfolioId} activeAgent={activePortfolio?.agent || null} saveState={saveState} tradeableQuotes={tradeableQuotes} requestedTicker={tradeTicker} defaultCapital={capital} onCreateCashAccount={(name, amount) => void createNewPortfolio(name, amount)} onCreatePortfolio={(name, amount) => void createNewPortfolio(name, amount)} onSwitchPortfolio={switchPortfolio} onChange={persist} onOpenSearch={() => setActiveTab("search")} onOpenAccount={() => setAccountModalOpen(true)} onRunAgent={() => void runAgentNow()} onUpdateAgent={(changes) => void updateAgent(changes)} onToast={announce}/>}
 
       {activeTab === "strategies" && <section className="shell page-section">
         <div className="page-hero"><span className="kicker">STRATEGY LIBRARY</span><h1>Ten lenses. One auditable score.</h1><p>No single strategy gets to dominate. The engine looks for independent agreement and displays every component.</p></div>
