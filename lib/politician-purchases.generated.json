@@ -1,11 +1,11 @@
 {
   "asOf": "2026-03-02",
-  "generatedAt": "2026-09-16T23:12:30.155Z",
+  "generatedAt": "2026-10-01T18:55:23.417Z",
   "source": "Politician Trades Dataset",
   "sourceUrl": "https://github.com/Seagull-Technologies/PoliticianTradesDataset",
   "sourceDataUrl": "https://raw.githubusercontent.com/Seagull-Technologies/PoliticianTradesDataset/main/trades.json",
   "methodology": "Up to three most recent unique reported purchases per ticker, limited to the SignalForge universe and rows with a transaction-date reference price.",
-  "coveredTickers": 817,
+  "coveredTickers": 809,
   "purchases": {
     "BRO": [
       {
@@ -12679,28 +12679,6 @@
         "disclosedAfterDays": 173
       }
     ],
-    "LCII": [
-      {
-        "politician": "Tony Wied",
-        "party": "Republican",
-        "chamber": "House",
-        "state": "WI",
-        "tradeDate": "2025-10-27",
-        "amountRange": "50K-100K",
-        "purchasePrice": 92.06,
-        "disclosedAfterDays": 18
-      },
-      {
-        "politician": "Michael McCaul",
-        "party": "Republican",
-        "chamber": "House",
-        "state": "TX",
-        "tradeDate": "2023-11-01",
-        "amountRange": "1K-15K",
-        "purchasePrice": 110.41,
-        "disclosedAfterDays": 43
-      }
-    ],
     "EQH": [
       {
         "politician": "Ro Khanna",
@@ -17331,18 +17309,6 @@
         "disclosedAfterDays": 63
       }
     ],
-    "TRN": [
-      {
-        "politician": "Lisa McClain",
-        "party": "Republican",
-        "chamber": "House",
-        "state": "MI",
-        "tradeDate": "2025-06-11",
-        "amountRange": "1K-15K",
-        "purchasePrice": 26.46,
-        "disclosedAfterDays": 63
-      }
-    ],
     "UBSI": [
       {
         "politician": "Lisa McClain",
@@ -17453,38 +17419,6 @@
         "amountRange": "1K-15K",
         "purchasePrice": 82.36,
         "disclosedAfterDays": 28
-      }
-    ],
-    "WHR": [
-      {
-        "politician": "Lisa McClain",
-        "party": "Republican",
-        "chamber": "House",
-        "state": "MI",
-        "tradeDate": "2025-07-22",
-        "amountRange": "1K-15K",
-        "purchasePrice": 96.52,
-        "disclosedAfterDays": 22
-      },
-      {
-        "politician": "Ro Khanna",
-        "party": "Democrat",
-        "chamber": "House",
-        "state": "CA",
-        "tradeDate": "2023-11-03",
-        "amountRange": "1K-15K",
-        "purchasePrice": 111.46,
-        "disclosedAfterDays": 33
-      },
-      {
-        "politician": "Ro Khanna",
-        "party": "Democrat",
-        "chamber": "House",
-        "state": "CA",
-        "tradeDate": "2023-08-29",
-        "amountRange": "1K-15K",
-        "purchasePrice": 137.98,
-        "disclosedAfterDays": 8
       }
     ],
     "XPO": [
@@ -17875,6 +17809,18 @@
         "amountRange": "1K-15K",
         "purchasePrice": 61.78,
         "disclosedAfterDays": 15
+      }
+    ],
+    "ICHR": [
+      {
+        "politician": "Debbie Wasserman Schultz",
+        "party": "Democrat",
+        "chamber": "House",
+        "state": "FL",
+        "tradeDate": "2025-08-05",
+        "amountRange": "1K-15K",
+        "purchasePrice": 14.06,
+        "disclosedAfterDays": 1
       }
     ],
     "CDW": [
@@ -18407,38 +18353,6 @@
         "disclosedAfterDays": 35
       }
     ],
-    "PENN": [
-      {
-        "politician": "Ro Khanna",
-        "party": "Democrat",
-        "chamber": "House",
-        "state": "CA",
-        "tradeDate": "2025-05-13",
-        "amountRange": "1K-15K",
-        "purchasePrice": 16.16,
-        "disclosedAfterDays": 30
-      },
-      {
-        "politician": "Ro Khanna",
-        "party": "Democrat",
-        "chamber": "House",
-        "state": "CA",
-        "tradeDate": "2025-04-30",
-        "amountRange": "1K-15K",
-        "purchasePrice": 15.22,
-        "disclosedAfterDays": 12
-      },
-      {
-        "politician": "Ro Khanna",
-        "party": "Democrat",
-        "chamber": "House",
-        "state": "CA",
-        "tradeDate": "2025-04-21",
-        "amountRange": "1K-15K",
-        "purchasePrice": 13.83,
-        "disclosedAfterDays": 21
-      }
-    ],
     "DVA": [
       {
         "politician": "Ro Khanna",
@@ -18577,18 +18491,6 @@
         "amountRange": "1K-15K",
         "purchasePrice": 24.17,
         "disclosedAfterDays": 27
-      }
-    ],
-    "MTX": [
-      {
-        "politician": "Gil Cisneros",
-        "party": "Democrat",
-        "chamber": "House",
-        "state": "CA",
-        "tradeDate": "2025-05-06",
-        "amountRange": "1K-15K",
-        "purchasePrice": 52.42,
-        "disclosedAfterDays": 31
       }
     ],
     "NEO": [
@@ -21695,16 +21597,16 @@
         "disclosedAfterDays": 43
       }
     ],
-    "WU": [
+    "ALGT": [
       {
-        "politician": "Tommy Tuberville",
-        "party": "Republican",
-        "chamber": "Senate",
-        "state": "AL",
-        "tradeDate": "2023-10-17",
+        "politician": "Josh Gottheimer",
+        "party": "Democrat",
+        "chamber": "House",
+        "state": "NJ",
+        "tradeDate": "2023-10-16",
         "amountRange": "1K-15K",
-        "purchasePrice": 13.37,
-        "disclosedAfterDays": 30
+        "purchasePrice": 74.76,
+        "disclosedAfterDays": 26
       }
     ],
     "SLGN": [
@@ -21727,18 +21629,6 @@
         "amountRange": "1K-15K",
         "purchasePrice": 49.26,
         "disclosedAfterDays": 21
-      }
-    ],
-    "XRAY": [
-      {
-        "politician": "Ro Khanna",
-        "party": "Democrat",
-        "chamber": "House",
-        "state": "CA",
-        "tradeDate": "2023-10-02",
-        "amountRange": "1K-15K",
-        "purchasePrice": 33.78,
-        "disclosedAfterDays": 37
       }
     ],
     "OGN": [
@@ -21817,28 +21707,6 @@
         "disclosedAfterDays": 11
       }
     ],
-    "CC": [
-      {
-        "politician": "Michael Burgess",
-        "party": "Republican",
-        "chamber": "House",
-        "state": "TX",
-        "tradeDate": "2023-08-09",
-        "amountRange": "15K-50K",
-        "purchasePrice": 35.6,
-        "disclosedAfterDays": 27
-      },
-      {
-        "politician": "Michael Burgess",
-        "party": "Republican",
-        "chamber": "House",
-        "state": "TX",
-        "tradeDate": "2023-07-06",
-        "amountRange": "15K-50K",
-        "purchasePrice": 35.97,
-        "disclosedAfterDays": 12
-      }
-    ],
     "PR": [
       {
         "politician": "Michael Guest",
@@ -21861,40 +21729,6 @@
         "amountRange": "1K-15K",
         "purchasePrice": 64.36,
         "disclosedAfterDays": 16
-      }
-    ],
-    "SRPT": [
-      {
-        "politician": "Josh Gottheimer",
-        "party": "Democrat",
-        "chamber": "House",
-        "state": "NJ",
-        "tradeDate": "2023-07-14",
-        "amountRange": "1K-15K",
-        "purchasePrice": 107.84,
-        "disclosedAfterDays": 38
-      }
-    ],
-    "UAA": [
-      {
-        "politician": "Tommy Tuberville",
-        "party": "Republican",
-        "chamber": "Senate",
-        "state": "AL",
-        "tradeDate": "2023-07-25",
-        "amountRange": "1K-15K",
-        "purchasePrice": 7.87,
-        "disclosedAfterDays": 20
-      },
-      {
-        "politician": "Tommy Tuberville",
-        "party": "Republican",
-        "chamber": "Senate",
-        "state": "AL",
-        "tradeDate": "2023-06-13",
-        "amountRange": "1K-15K",
-        "purchasePrice": 7.59,
-        "disclosedAfterDays": 31
       }
     ],
     "KD": [
