@@ -5,13 +5,23 @@ const NY_TZ = "America/New_York";
 function nyParts(now: Date) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: NY_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
     weekday: "short",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false
   }).formatToParts(now);
   const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value || "";
-  return { weekday: get("weekday"), hour: Number(get("hour")), minute: Number(get("minute")) };
+  return {
+    year: Number(get("year")),
+    month: Number(get("month")),
+    day: Number(get("day")),
+    weekday: get("weekday"),
+    hour: Number(get("hour")),
+    minute: Number(get("minute"))
+  };
 }
 
 export function getMarketStatus(now = new Date()): MarketStatus {
@@ -35,5 +45,21 @@ export function getMarketStatus(now = new Date()): MarketStatus {
 }
 
 export function marketBucket(now = new Date()) {
-  return Math.floor(now.getTime() / (5 * 60 * 1000));
+  const { year, month, day, weekday, hour, minute } = nyParts(now);
+  const open = 9 * 60 + 30;
+  const close = 16 * 60;
+  const minutes = hour * 60 + minute;
+  const weekdayIndex = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(weekday);
+  const isWeekday = weekdayIndex >= 1 && weekdayIndex <= 5;
+
+  if (isWeekday && minutes >= open && minutes < close) {
+    return (year * 10_000 + month * 100 + day) * 1_000 + Math.floor(minutes / 5);
+  }
+
+  const sessionDate = new Date(Date.UTC(year, month - 1, day));
+  if (!isWeekday || minutes < open) sessionDate.setUTCDate(sessionDate.getUTCDate() - 1);
+  while (sessionDate.getUTCDay() === 0 || sessionDate.getUTCDay() === 6) sessionDate.setUTCDate(sessionDate.getUTCDate() - 1);
+  const dateKey = sessionDate.getUTCFullYear() * 10_000 + (sessionDate.getUTCMonth() + 1) * 100 + sessionDate.getUTCDate();
+  const lastRegularBucket = Math.floor((close - 1) / 5);
+  return dateKey * 1_000 + lastRegularBucket;
 }

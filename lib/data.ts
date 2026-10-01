@@ -1,4 +1,5 @@
 import { UNIVERSE } from "./universe";
+import { getMarketStatus } from "./market";
 
 export type Quote = { price: number; changePct: number; source: "alpaca" | "modeled" };
 
@@ -27,7 +28,7 @@ function chunks<T>(items: T[], size: number) {
   return result;
 }
 
-async function alpacaBatch(symbols: string[], key: string, secret: string): Promise<Record<string, Quote>> {
+async function alpacaBatch(symbols: string[], key: string, secret: string, regularSessionOpen: boolean): Promise<Record<string, Quote>> {
   try {
     const response = await fetch(`https://data.alpaca.markets/v2/stocks/snapshots?symbols=${encodeURIComponent(symbols.join(","))}&feed=iex`, {
       headers: { "APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret },
@@ -39,7 +40,9 @@ async function alpacaBatch(symbols: string[], key: string, secret: string): Prom
     const result: Record<string, Quote> = {};
     for (const ticker of symbols) {
       const snapshot = json.snapshots?.[ticker];
-      const price = snapshot?.latestTrade?.p || snapshot?.dailyBar?.c;
+      const price = regularSessionOpen
+        ? snapshot?.latestTrade?.p || snapshot?.dailyBar?.c
+        : snapshot?.dailyBar?.c || snapshot?.latestTrade?.p;
       const previous = snapshot?.prevDailyBar?.c;
       if (price && previous) result[ticker] = { price, changePct: ((price / previous) - 1) * 100, source: "alpaca" };
     }
@@ -49,21 +52,22 @@ async function alpacaBatch(symbols: string[], key: string, secret: string): Prom
   }
 }
 
-async function alpacaQuotes(): Promise<Record<string, Quote>> {
+async function alpacaQuotes(now: Date): Promise<Record<string, Quote>> {
   const key = process.env.ALPACA_API_KEY;
   const secret = process.env.ALPACA_API_SECRET;
   if (!key || !secret) return {};
   const batches = chunks(UNIVERSE.map((stock) => stock.ticker), 150);
   const result: Record<string, Quote> = {};
+  const regularSessionOpen = getMarketStatus(now).isOpen;
   for (let index = 0; index < batches.length; index += 4) {
-    const wave = await Promise.all(batches.slice(index, index + 4).map((batch) => alpacaBatch(batch, key, secret)));
+    const wave = await Promise.all(batches.slice(index, index + 4).map((batch) => alpacaBatch(batch, key, secret, regularSessionOpen)));
     Object.assign(result, ...wave);
   }
   return result;
 }
 
-export async function getQuotes(bucket: number) {
-  return { ...modeledQuotes(bucket), ...(await alpacaQuotes()) };
+export async function getQuotes(bucket: number, now = new Date()) {
+  return { ...modeledQuotes(bucket), ...(await alpacaQuotes(now)) };
 }
 
 export function makeSparkline(ticker: string, price: number, bucket: number) {

@@ -182,9 +182,10 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
       } catch { /* keep the last successful quote when the feed is unavailable */ }
     }
     void refreshPortfolioQuotes();
+    if (!scan.market.isOpen) return () => { disposed = true; };
     const timer = window.setInterval(refreshPortfolioQuotes, 60_000);
     return () => { disposed = true; window.clearInterval(timer); };
-  }, [holdingSymbols, user, activePortfolioId, storageReady]);
+  }, [holdingSymbols, user, activePortfolioId, storageReady, scan.market.isOpen]);
 
   function persist(next: PaperPortfolioAccount) {
     setAccount(next);
@@ -428,7 +429,7 @@ export default function Dashboard({ initialScan }: { initialScan: ScanResult }) 
 
       {activeTab === "search" && <SearchWorkspace onTrade={openTradeTicket} onInspect={inspectSearchStock} portfolioTickers={account?.holdings.map((holding) => holding.ticker) || []}/>}
 
-      {activeTab === "portfolio" && <PaperPortfolio account={account} accountLoading={accountLoading} user={user} portfolios={portfolios} activePortfolioId={activePortfolioId} activeAgent={activePortfolio?.agent || null} saveState={saveState} tradeableQuotes={tradeableQuotes} requestedTicker={tradeTicker} defaultCapital={capital} onCreateCashAccount={(name, amount) => void createNewPortfolio(name, amount)} onCreatePortfolio={(name, amount) => void createNewPortfolio(name, amount)} onSwitchPortfolio={switchPortfolio} onChange={persist} onOpenSearch={() => setActiveTab("search")} onOpenAccount={() => setAccountModalOpen(true)} onRunAgent={() => void runAgentNow()} onUpdateAgent={(changes) => void updateAgent(changes)} onToast={announce}/>}
+      {activeTab === "portfolio" && <PaperPortfolio account={account} accountLoading={accountLoading} user={user} portfolios={portfolios} activePortfolioId={activePortfolioId} activeAgent={activePortfolio?.agent || null} saveState={saveState} marketOpen={scan.market.isOpen} tradeableQuotes={tradeableQuotes} requestedTicker={tradeTicker} defaultCapital={capital} onCreateCashAccount={(name, amount) => void createNewPortfolio(name, amount)} onCreatePortfolio={(name, amount) => void createNewPortfolio(name, amount)} onSwitchPortfolio={switchPortfolio} onChange={persist} onOpenSearch={() => setActiveTab("search")} onOpenAccount={() => setAccountModalOpen(true)} onRunAgent={() => void runAgentNow()} onUpdateAgent={(changes) => void updateAgent(changes)} onToast={announce}/>}
 
       {activeTab === "strategies" && <section className="shell page-section">
         <div className="page-hero"><span className="kicker">STRATEGY LIBRARY</span><h1>Ten lenses. One auditable score.</h1><p>No single strategy gets to dominate. The engine looks for independent agreement and displays every component.</p></div>

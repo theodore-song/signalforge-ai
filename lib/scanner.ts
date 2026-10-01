@@ -73,12 +73,12 @@ function thesisFor(stock: UniverseStock, signals: FactorSignal[]) {
   return `${stock.company} screens strongly on ${best[0]} and ${best[1]}, with cross-signal agreement that reduces reliance on any single narrative.`;
 }
 
-let cachedEvaluation: { bucket: number; value: Promise<UniverseEvaluation> } | null = null;
+let cachedEvaluation: { key: string; value: Promise<UniverseEvaluation> } | null = null;
 
 async function calculateUniverse(now: Date): Promise<UniverseEvaluation> {
   const bucket = marketBucket(now);
   const [quotes, congress, billionaire, crowd] = await Promise.all([
-    getQuotes(bucket),
+    getQuotes(bucket, now),
     getExternalScores(process.env.POLITICIAN_TRADES_URL),
     getExternalScores(process.env.INSTITUTIONAL_HOLDINGS_URL),
     getExternalScores(process.env.CROWD_SENTIMENT_URL)
@@ -110,9 +110,10 @@ async function calculateUniverse(now: Date): Promise<UniverseEvaluation> {
 export function evaluateUniverse(forceFresh = false): Promise<UniverseEvaluation> {
   const now = new Date();
   const bucket = marketBucket(now);
-  if (!forceFresh && cachedEvaluation?.bucket === bucket) return cachedEvaluation.value;
+  const key = `${bucket}:${getMarketStatus(now).session}`;
+  if (!forceFresh && cachedEvaluation?.key === key) return cachedEvaluation.value;
   const value = calculateUniverse(now);
-  cachedEvaluation = { bucket, value };
+  cachedEvaluation = { key, value };
   return value;
 }
 

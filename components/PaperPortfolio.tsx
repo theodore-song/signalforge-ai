@@ -17,8 +17,9 @@ function signedMoney(value: number) {
   return `${value >= 0 ? "+" : ""}${money(value)}`;
 }
 
-function quoteFreshness(value?: string) {
+function quoteFreshness(value: string | undefined, marketOpen: boolean) {
   if (!value) return "Prices syncing…";
+  if (!marketOpen) return "Prices fixed at the last regular close";
   return `Prices updated ${new Date(value).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`;
 }
 
@@ -30,6 +31,7 @@ type Props = {
   activePortfolioId: string | null;
   activeAgent: PortfolioAgentSettings | null;
   saveState: "idle" | "saving" | "saved" | "local" | "error";
+  marketOpen: boolean;
   tradeableQuotes: TradeQuote[];
   requestedTicker: string | null;
   defaultCapital: number;
@@ -44,7 +46,7 @@ type Props = {
   onToast: (message: string) => void;
 };
 
-export default function PaperPortfolio({ account, accountLoading, user, portfolios, activePortfolioId, activeAgent, saveState, tradeableQuotes, requestedTicker, defaultCapital, onCreateCashAccount, onCreatePortfolio, onSwitchPortfolio, onChange, onOpenSearch, onOpenAccount, onRunAgent, onUpdateAgent, onToast }: Props) {
+export default function PaperPortfolio({ account, accountLoading, user, portfolios, activePortfolioId, activeAgent, saveState, marketOpen, tradeableQuotes, requestedTicker, defaultCapital, onCreateCashAccount, onCreatePortfolio, onSwitchPortfolio, onChange, onOpenSearch, onOpenAccount, onRunAgent, onUpdateAgent, onToast }: Props) {
   const [side, setSide] = useState<"buy" | "sell">("buy");
   const [symbol, setSymbol] = useState(requestedTicker || tradeableQuotes[0]?.ticker || "");
   const [quantity, setQuantity] = useState("");
@@ -161,7 +163,7 @@ export default function PaperPortfolio({ account, accountLoading, user, portfoli
 
     <div className="brokerage-layout">
       <div className="positions-card">
-        <div className="brokerage-card-heading"><div><span className="kicker">OPEN POSITIONS</span><h2>Holdings</h2></div><span>{account.holdings.length} positions · {quoteFreshness(account.quotesUpdatedAt)}</span></div>
+        <div className="brokerage-card-heading"><div><span className="kicker">OPEN POSITIONS</span><h2>Holdings</h2></div><span>{account.holdings.length} positions · {quoteFreshness(account.quotesUpdatedAt, marketOpen)}</span></div>
         {account.holdings.length ? <div className="positions-table">
           <div className="position-row header"><span>Company</span><span>Shares</span><span>Avg. cost</span><span>Last</span><span>Market value</span><span>Return</span><span>Allocation</span><span></span></div>
           {account.holdings.map((holding) => {
